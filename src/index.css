@@ -1,0 +1,70 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ── CSS 変数: カラーパレット ────────────────────────────────────────────── */
+:root {
+  --color-brand:        #0ea5e9; /* sky-500 — メインアクセント */
+  --color-brand-dark:   #0284c7; /* sky-600 — active 状態     */
+  --color-brand-light:  #38bdf8; /* sky-400 — hover 状態      */
+  --color-brand-muted:  #e0f2fe; /* sky-100 — 薄いアクセント面 */
+  --color-surface:      #f0f9ff; /* sky-50  — ページ下地      */
+  --color-surface-card: #ffffff; /* white   — カード面        */
+  --color-border:       #e0f2fe; /* sky-100 — 通常ボーダー    */
+  --color-border-mid:   #bae6fd; /* sky-200 — やや強いボーダー */
+  --color-text:         #0f172a; /* slate-900 — 本文          */
+  --color-text-sub:     #475569; /* slate-600 — サブ本文      */
+  --color-text-muted:   #94a3b8; /* slate-400 — 補足          */
+}
+
+@layer base {
+  html, body, #root {
+    background-color: var(--color-surface);
+  }
+
+  html {
+    -webkit-tap-highlight-color: transparent;
+    overscroll-behavior: none;
+    font-family: 'Hiragino Sans', 'Hiragino Kaku Gothic ProN', 'Noto Sans JP',
+      'Yu Gothic UI', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI',
+      sans-serif;
+    font-feature-settings: 'tnum' 1; /* 等幅数字 */
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    color: var(--color-text);
+  }
+
+  body {
+    overscroll-behavior: none;
+  }
+
+  /* number input スピナー非表示 */
+  input[type='number']::-webkit-outer-spin-button,
+  input[type='number']::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+  input[type='number'] {
+    -moz-appearance: textfield;
+  }
+
+  /* search input の × ボタン非表示 */
+  input[type='search']::-webkit-search-cancel-button {
+    -webkit-appearance: none;
+  }
+}
+
+@layer utilities {
+  /* iOS/Android ノッチ・ホームバー対応 */
+  .pb-safe {
+    padding-bottom: max(1.25rem, env(safe-area-inset-bottom));
+  }
+  .pt-safe {
+    padding-top: max(0.75rem, env(safe-area-inset-top));
+  }
+
+  /* セクションラベル共通 — sky-600 で統一 */
+  .label-xs {
+    @apply text-xs font-semibold uppercase tracking-wider text-sky-600;
+  }
+}

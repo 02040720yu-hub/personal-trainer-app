@@ -1,0 +1,23 @@
+# Dependencies
+node_modules
+
+# Build
+dist
+
+# Local env
+.env
+.env.*
+!.env.example
+
+# Logs & OS
+*.log
+.DS_Store
+Thumbs.db
+
+# Editor
+.idea
+.vscode/*
+!.vscode/extensions.json
+
+# Vite
+*.local
