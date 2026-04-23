@@ -68,7 +68,7 @@ export default function App() {
   }
 
   return (
-    <div className="min-h-screen bg-sky-50 text-slate-900">
+    <div className="min-h-screen bg-slate-950 text-white">
       <div className="max-w-md mx-auto min-h-screen flex flex-col">
 
         {/* ── タイトル ─────────────────────────────────────────── */}

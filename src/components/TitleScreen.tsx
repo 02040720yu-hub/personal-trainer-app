@@ -24,38 +24,48 @@ export default function TitleScreen({ onEnterMain, onOpenSettings }: Props) {
     }
   }
 
-  // オンボーディング（初回プロフィール設定）
   if (step === 'onboarding') {
     return <ProfileSetup onComplete={onEnterMain} />
   }
 
-  // タイトル / ランディング
   return (
-    <div className="flex flex-col min-h-screen bg-white px-6 pt-safe">
+    <div className="relative flex flex-col min-h-screen bg-slate-950 px-6 pt-safe overflow-hidden">
+
+      {/* 背景グロー */}
+      <div className="absolute inset-0 pointer-events-none" aria-hidden="true">
+        <div className="absolute -top-32 left-1/2 -translate-x-1/2 w-80 h-80 bg-cyan-500/15 rounded-full blur-3xl" />
+        <div className="absolute top-2/3 -right-16 w-56 h-56 bg-blue-600/10 rounded-full blur-3xl" />
+        <div className="absolute bottom-0 left-0 w-48 h-48 bg-cyan-600/8 rounded-full blur-3xl" />
+      </div>
 
       {/* 設定ボタン（右上） */}
-      <div className="flex justify-end pt-4">
+      <div className="relative flex justify-end pt-4">
         <button
           type="button"
           onClick={onOpenSettings}
           aria-label="設定を開く"
-          className="p-2 text-slate-400 hover:text-sky-600 rounded-xl
+          className="p-2 text-slate-500 hover:text-cyan-400 rounded-xl
             active:scale-95 transition-all
-            focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500"
+            focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500"
         >
           <GearIcon />
         </button>
       </div>
 
       {/* ヒーロー */}
-      <div className="flex-1 flex flex-col items-center justify-center gap-8 text-center pb-8">
-        <div className="space-y-4">
-          <div className="w-24 h-24 bg-sky-100 rounded-[2rem] flex items-center justify-center mx-auto shadow-sm">
-            <span className="text-5xl" role="img" aria-label="ダンベル">🏋️</span>
+      <div className="relative flex-1 flex flex-col items-center justify-center gap-8 text-center pb-8">
+        <div className="space-y-5">
+          {/* ロゴ */}
+          <div className="relative mx-auto w-24 h-24">
+            <div className="absolute inset-0 bg-cyan-500/25 rounded-[2rem] blur-xl" />
+            <div className="relative w-24 h-24 bg-slate-900 border border-cyan-500/30 rounded-[2rem]
+              flex items-center justify-center shadow-[0_0_32px_rgba(6,182,212,0.2)]">
+              <TrophyIcon />
+            </div>
           </div>
           <div>
-            <h1 className="text-3xl font-bold tracking-tight text-slate-900">筋トレ記録</h1>
-            <p className="text-slate-500 text-sm mt-2 leading-relaxed">
+            <h1 className="text-3xl font-bold tracking-tight text-white">筋トレ記録</h1>
+            <p className="text-slate-400 text-sm mt-2 leading-relaxed">
               重量・レップ数を記録して<br />
               自分だけの成長データを積み上げよう
             </p>
@@ -63,30 +73,33 @@ export default function TitleScreen({ onEnterMain, onOpenSettings }: Props) {
         </div>
 
         {/* 特徴リスト */}
-        <ul className="space-y-2.5 text-left w-full max-w-xs">
+        <ul className="space-y-2 text-left w-full max-w-xs">
           {[
-            { icon: '📊', text: '1RM を自動計算・次回目標を提示' },
-            { icon: '⚡', text: 'お任せコースで時間に合わせた自動プラン' },
-            { icon: '📅', text: '活動カレンダーで継続を可視化' },
-            { icon: '📤', text: 'CSV エクスポートでデータを持ち出し' },
-          ].map(f => (
-            <li key={f.icon} className="flex items-center gap-3">
-              <span className="text-xl" aria-hidden="true">{f.icon}</span>
-              <span className="text-sm text-slate-600">{f.text}</span>
+            '1RM を自動計算・次回目標を提示',
+            'お任せコースで時間に合わせた自動プラン',
+            '活動カレンダーで継続を可視化',
+            'CSV エクスポートでデータを持ち出し',
+          ].map(text => (
+            <li key={text}
+              className="flex items-center gap-3 bg-slate-900/70 border border-white/10
+                rounded-2xl px-4 py-3">
+              <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 shrink-0" aria-hidden="true" />
+              <span className="text-sm text-slate-300">{text}</span>
             </li>
           ))}
         </ul>
       </div>
 
       {/* CTA */}
-      <div className="py-6 pb-safe space-y-3">
+      <div className="relative py-6 pb-safe space-y-3">
         <button
           type="button"
           onClick={handleStart}
-          className="w-full h-14 bg-sky-500 hover:bg-sky-600 active:scale-[0.98]
+          className="w-full h-14 bg-gradient-to-r from-cyan-500 to-blue-600
+            hover:from-cyan-400 hover:to-blue-500 active:scale-[0.98]
             text-white text-base font-bold rounded-2xl transition-all
-            shadow-lg shadow-sky-500/25
-            focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 focus-visible:ring-offset-2"
+            shadow-[0_0_24px_rgba(6,182,212,0.4)]
+            focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950"
         >
           はじめる
         </button>
@@ -94,13 +107,34 @@ export default function TitleScreen({ onEnterMain, onOpenSettings }: Props) {
           type="button"
           onClick={onOpenSettings}
           className="w-full h-11 text-slate-500 text-sm font-semibold rounded-2xl
-            hover:bg-slate-50 active:scale-[0.98] transition-all
-            focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500"
+            hover:bg-slate-900 hover:text-slate-300 active:scale-[0.98] transition-all
+            focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500"
         >
           設定
         </button>
       </div>
     </div>
+  )
+}
+
+function TrophyIcon() {
+  return (
+    <svg width="44" height="44" viewBox="0 0 44 44" fill="none" aria-hidden="true">
+      <path
+        d="M22 28c-6 0-10-4.5-10-10V8h20v10c0 5.5-4 10-10 10Z"
+        stroke="url(#tg)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+      />
+      <path d="M12 12H6a4 4 0 0 0 4 4" stroke="url(#tg)" strokeWidth="2" strokeLinecap="round"/>
+      <path d="M32 12h6a4 4 0 0 1-4 4" stroke="url(#tg)" strokeWidth="2" strokeLinecap="round"/>
+      <path d="M22 28v6" stroke="url(#tg)" strokeWidth="2" strokeLinecap="round"/>
+      <path d="M15 34h14" stroke="url(#tg)" strokeWidth="2" strokeLinecap="round"/>
+      <defs>
+        <linearGradient id="tg" x1="6" y1="8" x2="38" y2="36" gradientUnits="userSpaceOnUse">
+          <stop stopColor="#22d3ee"/>
+          <stop offset="1" stopColor="#3b82f6"/>
+        </linearGradient>
+      </defs>
+    </svg>
   )
 }
 

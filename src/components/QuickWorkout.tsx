@@ -161,10 +161,10 @@ export default function QuickWorkout({ onOpenDashboard, onOpenHeatmap, onOpenSet
   }, [])
 
   return (
-    <div className="flex flex-col min-h-screen bg-sky-50">
+    <div className="flex flex-col min-h-screen bg-slate-950">
 
       {/* ヘッダー — ステップに応じてアクションを切替 */}
-      <div className="sticky top-0 z-10 px-4 pt-safe pb-3 bg-white/95 backdrop-blur-sm border-b border-sky-100">
+      <div className="sticky top-0 z-10 px-4 pt-safe pb-3 bg-slate-950/95 backdrop-blur-sm border-b border-white/10">
         <div className="flex items-center gap-3">
 
           {/* select: 設定アイコン */}
@@ -172,8 +172,8 @@ export default function QuickWorkout({ onOpenDashboard, onOpenHeatmap, onOpenSet
             <button
               type="button"
               onClick={onOpenSettings}
-              className="text-slate-400 hover:text-slate-600 p-1 -ml-1 rounded-lg
-                active:scale-95 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500"
+              className="text-slate-500 hover:text-slate-300 p-1 -ml-1 rounded-lg
+                active:scale-95 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500"
               aria-label="設定"
             >
               <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
@@ -189,8 +189,8 @@ export default function QuickWorkout({ onOpenDashboard, onOpenHeatmap, onOpenSet
             <button
               type="button"
               onClick={() => setStep('select')}
-              className="text-sky-600 hover:text-sky-700 p-1 -ml-1 rounded-lg
-                active:scale-95 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500"
+              className="text-cyan-400 hover:text-cyan-300 p-1 -ml-1 rounded-lg
+                active:scale-95 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500"
               aria-label="部位選択に戻る"
             >
               <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
@@ -205,14 +205,14 @@ export default function QuickWorkout({ onOpenDashboard, onOpenHeatmap, onOpenSet
           )}
 
           <div className="flex-1">
-            <h1 className="text-lg font-bold tracking-tight text-slate-900">
+            <h1 className="text-lg font-bold tracking-tight text-white">
               {step === 'summary'
-                ? (courseType === 'toning' ? '引き締め完了 🎉' : 'お任せ完了 🎉')
+                ? (courseType === 'toning' ? '引き締め完了' : 'お任せ完了')
                 : (courseType === 'toning' ? '引き締めコース' : 'お任せコース')
               }
             </h1>
             {step === 'record' && plan && (
-              <p className="text-xs text-slate-500">
+              <p className="text-xs text-slate-400">
                 {currentIndex + 1} / {plan.exercises.length} 種目
               </p>
             )}
@@ -309,26 +309,26 @@ function SelectStep({
     }
   }
 
-  const accentActive   = isToning ? 'bg-rose-500 text-white shadow-md shadow-rose-500/25' : 'bg-sky-500 text-white shadow-md shadow-sky-500/25'
-  const accentRing     = isToning ? 'focus-visible:ring-rose-500' : 'focus-visible:ring-sky-500'
+  const accentActive   = isToning ? 'bg-rose-500 text-white shadow-md shadow-rose-500/25' : 'bg-cyan-500 text-white shadow-md shadow-cyan-500/25'
+  const accentRing     = isToning ? 'focus-visible:ring-rose-500' : 'focus-visible:ring-cyan-500'
   const generateBtnOn  = isToning
     ? 'bg-rose-500 text-white shadow-lg shadow-rose-500/25 active:scale-[0.98] hover:bg-rose-600'
-    : 'bg-sky-500 text-white shadow-lg shadow-sky-500/25 active:scale-[0.98] hover:bg-sky-600'
+    : 'bg-gradient-to-r from-cyan-500 to-blue-600 text-white shadow-lg shadow-cyan-500/25 active:scale-[0.98] hover:from-cyan-400 hover:to-blue-500'
 
   return (
     <div className="px-4 py-5 space-y-6">
 
       {/* コース切り替えタブ */}
-      <div className="flex bg-slate-100 rounded-2xl p-1 gap-1">
+      <div className="flex bg-slate-900 rounded-2xl p-1 gap-1 border border-white/10">
         <button
           type="button"
           onClick={() => onCourseTypeChange('hypertrophy')}
           aria-pressed={!isToning}
           className={`flex-1 rounded-xl py-2.5 text-sm font-bold transition-all
-            focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500
-            ${!isToning ? 'bg-sky-500 text-white shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+            focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500
+            ${!isToning ? 'bg-cyan-500 text-white shadow-sm' : 'text-slate-500 hover:text-slate-300'}`}
         >
-          💪 筋肥大
+          筋肥大
         </button>
         <button
           type="button"
@@ -336,9 +336,9 @@ function SelectStep({
           aria-pressed={isToning}
           className={`flex-1 rounded-xl py-2.5 text-sm font-bold transition-all
             focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-500
-            ${isToning ? 'bg-rose-500 text-white shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+            ${isToning ? 'bg-rose-500 text-white shadow-sm' : 'text-slate-500 hover:text-slate-300'}`}
         >
-          ✨ 引き締め
+          引き締め
         </button>
       </div>
 
@@ -349,9 +349,9 @@ function SelectStep({
           <p className="text-xs text-rose-100 mt-0.5">15回高回数・軽負荷で脂肪燃焼＆引き締めを目指します</p>
         </div>
       ) : (
-        <div className="bg-gradient-to-r from-sky-500 to-sky-400 text-white rounded-2xl px-4 py-3.5">
+        <div className="bg-gradient-to-r from-cyan-600 to-cyan-500 text-white rounded-2xl px-4 py-3.5">
           <p className="text-sm font-bold">部位を選ぶだけでスタートできます</p>
-          <p className="text-xs text-sky-100 mt-0.5">種目は自動で決まります。手動選択は不要です。</p>
+          <p className="text-xs text-cyan-100 mt-0.5">種目は自動で決まります。手動選択は不要です。</p>
         </div>
       )}
 
@@ -369,7 +369,7 @@ function SelectStep({
                 focus-visible:outline-none focus-visible:ring-2 ${accentRing}
                 ${minutes === m
                   ? accentActive
-                  : 'bg-white border border-sky-200 text-slate-700 hover:border-sky-300'
+                  : 'bg-slate-900 border border-white/10 text-slate-300 hover:border-white/20'
                 }`}
             >
               {m}<span className="text-[10px] font-normal ml-0.5">分</span>
@@ -384,14 +384,14 @@ function SelectStep({
           <p className="label-xs mb-3">コースを選ぶ</p>
 
           {/* プリセット / カスタムタブ */}
-          <div className="flex bg-slate-100 rounded-xl p-1 mb-3 gap-1">
+          <div className="flex bg-slate-900 rounded-xl p-1 mb-3 gap-1 border border-white/10">
             <button
               type="button"
               onClick={() => { if (toningPreset === 'custom') onToningPresetChange('full') }}
               aria-pressed={toningPreset !== 'custom'}
               className={`flex-1 rounded-lg py-2 text-sm font-semibold transition-all
                 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-500
-                ${toningPreset !== 'custom' ? 'bg-white text-rose-500 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                ${toningPreset !== 'custom' ? 'bg-slate-800 text-rose-400 shadow-sm' : 'text-slate-500 hover:text-slate-300'}`}
             >
               プリセット
             </button>
@@ -401,7 +401,7 @@ function SelectStep({
               aria-pressed={toningPreset === 'custom'}
               className={`flex-1 rounded-lg py-2 text-sm font-semibold transition-all
                 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-500
-                ${toningPreset === 'custom' ? 'bg-white text-rose-500 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                ${toningPreset === 'custom' ? 'bg-slate-800 text-rose-400 shadow-sm' : 'text-slate-500 hover:text-slate-300'}`}
             >
               部位を指定
             </button>
@@ -422,10 +422,9 @@ function SelectStep({
                       focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-500
                       ${isSelected
                         ? 'bg-rose-500 text-white shadow-md shadow-rose-500/25'
-                        : 'bg-white border border-rose-100 text-slate-700 hover:border-rose-200 hover:shadow-sm'
+                        : 'bg-slate-900 border border-rose-500/20 text-slate-300 hover:border-rose-500/30'
                       }`}
                   >
-                    <span className="text-xl" aria-hidden="true">{opt.emoji}</span>
                     <div className="text-left">
                       <p className="text-sm font-bold">{opt.label}</p>
                       <p className={`text-xs mt-0.5 ${isSelected ? 'text-rose-100' : 'text-slate-500'}`}>
@@ -455,25 +454,24 @@ function SelectStep({
                       type="button"
                       onClick={() => toggleBodyPart(opt.value)}
                       aria-pressed={selected}
-                      className={`flex flex-col items-center gap-1 rounded-2xl py-3 px-2 text-center
+                      className={`flex items-center justify-center rounded-2xl py-3.5 px-2 text-center
                         transition-all active:scale-95
                         focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-500
                         ${selected
                           ? 'bg-rose-500 text-white shadow-md shadow-rose-500/25'
-                          : 'bg-white border border-rose-100 text-slate-600 hover:border-rose-200'
+                          : 'bg-slate-900 border border-rose-500/20 text-slate-400 hover:border-rose-500/30'
                         }`}
                     >
-                      <span className="text-lg" aria-hidden="true">{opt.emoji}</span>
-                      <span className="text-[11px] font-semibold leading-tight">{opt.label}</span>
+                      <span className="text-xs font-bold leading-tight">{opt.label}</span>
                     </button>
                   )
                 })}
               </div>
               {customBodyParts.length === 0 && (
-                <p className="text-xs text-rose-500 mt-2.5 text-center font-medium">部位を1つ以上選んでください</p>
+                <p className="text-xs text-rose-400 mt-2.5 text-center font-medium">部位を1つ以上選んでください</p>
               )}
               {customBodyParts.length > 0 && (
-                <p className="text-xs text-rose-400 mt-2.5 text-center font-medium">
+                <p className="text-xs text-rose-400/70 mt-2.5 text-center font-medium">
                   {customBodyParts.map(bp => BODY_PART_LABELS[bp]).join('・')} を選択中
                 </p>
               )}
@@ -488,14 +486,14 @@ function SelectStep({
           <p className="label-xs mb-3">トレーニング部位</p>
 
           {/* タブ: プリセット / カスタム */}
-          <div className="flex bg-slate-100 rounded-xl p-1 mb-3 gap-1">
+          <div className="flex bg-slate-900 rounded-xl p-1 mb-3 gap-1 border border-white/10">
             <button
               type="button"
               onClick={() => { if (isCustom) onFocusChange('full') }}
               aria-pressed={!isCustom}
               className={`flex-1 rounded-lg py-2 text-sm font-semibold transition-all
-                focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500
-                ${!isCustom ? 'bg-white text-sky-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500
+                ${!isCustom ? 'bg-slate-800 text-cyan-400 shadow-sm' : 'text-slate-500 hover:text-slate-300'}`}
             >
               プリセット
             </button>
@@ -504,8 +502,8 @@ function SelectStep({
               onClick={() => onFocusChange('custom')}
               aria-pressed={isCustom}
               className={`flex-1 rounded-lg py-2 text-sm font-semibold transition-all
-                focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500
-                ${isCustom ? 'bg-white text-sky-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500
+                ${isCustom ? 'bg-slate-800 text-cyan-400 shadow-sm' : 'text-slate-500 hover:text-slate-300'}`}
             >
               部位を指定
             </button>
@@ -521,16 +519,15 @@ function SelectStep({
                   onClick={() => onFocusChange(opt.value)}
                   aria-pressed={focus === opt.value}
                   className={`w-full flex items-center gap-3 rounded-2xl p-4 transition-all active:scale-[0.98]
-                    focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500
+                    focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500
                     ${focus === opt.value
-                      ? 'bg-sky-500 text-white shadow-md shadow-sky-500/25'
-                      : 'bg-white border border-sky-200 text-slate-700 hover:border-sky-300 hover:shadow-sm'
+                      ? 'bg-cyan-500 text-white shadow-md shadow-cyan-500/25'
+                      : 'bg-slate-900 border border-white/10 text-slate-300 hover:border-white/20'
                     }`}
                 >
-                  <span className="text-xl" aria-hidden="true">{opt.emoji}</span>
                   <div className="text-left">
                     <p className="text-sm font-bold">{opt.label}</p>
-                    <p className={`text-xs mt-0.5 ${focus === opt.value ? 'text-sky-100' : 'text-slate-500'}`}>
+                    <p className={`text-xs mt-0.5 ${focus === opt.value ? 'text-cyan-100' : 'text-slate-500'}`}>
                       {opt.desc}
                     </p>
                   </div>
@@ -556,27 +553,26 @@ function SelectStep({
                       type="button"
                       onClick={() => toggleBodyPart(opt.value)}
                       aria-pressed={selected}
-                      className={`flex flex-col items-center gap-1 rounded-2xl py-3 px-2 text-center
+                      className={`flex items-center justify-center rounded-2xl py-3.5 px-2 text-center
                         transition-all active:scale-95
-                        focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500
+                        focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500
                         ${selected
-                          ? 'bg-sky-500 text-white shadow-md shadow-sky-500/25'
-                          : 'bg-white border border-sky-200 text-slate-600 hover:border-sky-300'
+                          ? 'bg-cyan-500 text-white shadow-md shadow-cyan-500/25'
+                          : 'bg-slate-900 border border-white/10 text-slate-400 hover:border-white/20'
                         }`}
                     >
-                      <span className="text-lg" aria-hidden="true">{opt.emoji}</span>
-                      <span className="text-[11px] font-semibold leading-tight">{opt.label}</span>
+                      <span className="text-xs font-bold leading-tight">{opt.label}</span>
                     </button>
                   )
                 })}
               </div>
               {customBodyParts.length === 0 && (
-                <p className="text-xs text-rose-500 mt-2.5 text-center font-medium">
+                <p className="text-xs text-rose-400 mt-2.5 text-center font-medium">
                   部位を1つ以上選んでください
                 </p>
               )}
               {customBodyParts.length > 0 && (
-                <p className="text-xs text-sky-600 mt-2.5 text-center font-medium">
+                <p className="text-xs text-cyan-400/70 mt-2.5 text-center font-medium">
                   {customBodyParts.map(bp => BODY_PART_LABELS[bp]).join('・')} を選択中
                 </p>
               )}
@@ -592,36 +588,36 @@ function SelectStep({
           <button
             type="button"
             onClick={onOpenDashboard}
-            className="flex-1 flex flex-col items-center gap-1.5 bg-white border border-sky-200
-              rounded-2xl py-3.5 px-2 text-slate-700 hover:border-sky-300 hover:shadow-sm
-              active:scale-95 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500"
+            className="flex-1 flex items-center justify-between bg-slate-900 border border-white/10
+              rounded-2xl py-3.5 px-4 text-slate-300 hover:border-white/20
+              active:scale-95 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500"
           >
-            <span className="text-xl" aria-hidden="true">📊</span>
             <span className="text-xs font-semibold">ダッシュボード</span>
+            <span className="text-slate-600 text-xs">→</span>
           </button>
           <button
             type="button"
             onClick={onOpenHeatmap}
-            className="flex-1 flex flex-col items-center gap-1.5 bg-white border border-sky-200
-              rounded-2xl py-3.5 px-2 text-slate-700 hover:border-sky-300 hover:shadow-sm
-              active:scale-95 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500"
+            className="flex-1 flex items-center justify-between bg-slate-900 border border-white/10
+              rounded-2xl py-3.5 px-4 text-slate-300 hover:border-white/20
+              active:scale-95 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500"
           >
-            <span className="text-xl" aria-hidden="true">📅</span>
             <span className="text-xs font-semibold">活動カレンダー</span>
+            <span className="text-slate-600 text-xs">→</span>
           </button>
         </div>
       </section>
 
       {/* プレビュー */}
-      <div className="bg-white rounded-2xl border border-sky-100 shadow-sm px-4 py-3">
-        <p className="text-xs text-slate-500">予定</p>
-        <p className="text-slate-900 font-bold mt-1 tabular-nums">
-          <span className={`text-2xl ${isToning ? 'text-rose-500' : 'text-sky-600'}`}>{exerciseCount}</span>
+      <div className="bg-slate-900 rounded-2xl border border-white/10 px-4 py-3">
+        <p className="text-xs text-slate-400">予定</p>
+        <p className="text-white font-bold mt-1 tabular-nums">
+          <span className={`text-2xl ${isToning ? 'text-rose-400' : 'text-cyan-400'}`}>{exerciseCount}</span>
           <span className="text-sm ml-1">種目</span>
-          <span className="mx-2 text-slate-300">·</span>
-          <span className={`text-2xl ${isToning ? 'text-rose-500' : 'text-sky-600'}`}>{totalSets}</span>
+          <span className="mx-2 text-slate-700">·</span>
+          <span className={`text-2xl ${isToning ? 'text-rose-400' : 'text-cyan-400'}`}>{totalSets}</span>
           <span className="text-sm ml-1">セット</span>
-          {isToning && <span className="text-xs text-rose-400 ml-2 font-normal">15回×軽重量</span>}
+          {isToning && <span className="text-xs text-rose-400/70 ml-2 font-normal">15回×軽重量</span>}
         </p>
       </div>
 
@@ -631,8 +627,8 @@ function SelectStep({
         onClick={onGenerate}
         disabled={!canGenerate}
         className={`w-full h-14 rounded-2xl text-base font-bold transition-all
-          focus-visible:outline-none focus-visible:ring-2 ${accentRing} focus-visible:ring-offset-2
-          ${canGenerate ? generateBtnOn : 'bg-slate-200 text-slate-400 cursor-not-allowed'}`}
+          focus-visible:outline-none focus-visible:ring-2 ${accentRing} focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950
+          ${canGenerate ? generateBtnOn : 'bg-slate-800 text-slate-600 cursor-not-allowed border border-white/5'}`}
       >
         {isToning ? 'プランを作成（引き締め）' : 'プランを作成'}
       </button>
@@ -642,9 +638,9 @@ function SelectStep({
         <button
           type="button"
           onClick={onOpenTitle}
-          className="text-xs text-slate-400 hover:text-slate-600 active:scale-95 transition-all
+          className="text-xs text-slate-600 hover:text-slate-400 active:scale-95 transition-all
             px-3 py-1.5 rounded-lg
-            focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500"
+            focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500"
         >
           タイトルに戻る
         </button>
@@ -674,19 +670,16 @@ function PlanStep({
   return (
     <div className="px-4 py-5 space-y-4">
       {/* プランヘッダー */}
-      <div className="bg-sky-500 text-white rounded-2xl p-4">
-        <p className="text-sm font-semibold text-sky-100">今日のプラン</p>
-        <div className="flex items-end justify-between mt-1">
-          <div>
-            <p className="text-2xl font-bold tabular-nums">
-              {plan.minutes}分 · {focusLabel}
-            </p>
-            <p className="text-sm text-sky-100 mt-0.5 tabular-nums">
-              {plan.exercises.length}種目 · {plan.totalSets}セット ·
-              インターバル{restMin > 0 ? `${restMin}分` : ''}{restSec > 0 ? `${restSec}秒` : ''}
-            </p>
-          </div>
-          <span className="text-3xl" aria-hidden="true">⚡</span>
+      <div className="bg-gradient-to-r from-cyan-600 to-blue-700 text-white rounded-2xl p-4">
+        <p className="text-sm font-semibold text-cyan-100">今日のプラン</p>
+        <div className="mt-1">
+          <p className="text-2xl font-bold tabular-nums">
+            {plan.minutes}分 · {focusLabel}
+          </p>
+          <p className="text-sm text-cyan-100 mt-0.5 tabular-nums">
+            {plan.exercises.length}種目 · {plan.totalSets}セット ·
+            インターバル{restMin > 0 ? `${restMin}分` : ''}{restSec > 0 ? `${restSec}秒` : ''}
+          </p>
         </div>
       </div>
 
@@ -702,20 +695,20 @@ function PlanStep({
         <button
           type="button"
           onClick={onBack}
-          className="flex-1 h-12 bg-white border border-sky-200 text-slate-700 rounded-xl font-semibold
-            active:scale-[0.98] transition-all hover:border-sky-300
-            focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500"
+          className="flex-1 h-12 bg-slate-900 border border-white/10 text-slate-300 rounded-xl font-semibold
+            active:scale-[0.98] transition-all hover:border-white/20
+            focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500"
         >
           やり直す
         </button>
         <button
           type="button"
           onClick={onStart}
-          className="flex-[2] h-12 bg-sky-500 text-white rounded-xl font-bold text-base
-            shadow-md shadow-sky-500/25 active:scale-[0.98] transition-all
-            hover:bg-sky-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500"
+          className="flex-[2] h-12 bg-gradient-to-r from-cyan-500 to-blue-600 text-white rounded-xl font-bold text-base
+            shadow-md shadow-cyan-500/25 active:scale-[0.98] transition-all
+            hover:from-cyan-400 hover:to-blue-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500"
         >
-          スタート 🚀
+          スタート
         </button>
       </div>
     </div>
@@ -724,21 +717,21 @@ function PlanStep({
 
 function PlanExerciseCard({ planned, index }: { planned: PlannedExercise; index: number }) {
   return (
-    <div className="bg-white border border-sky-100 rounded-2xl px-4 py-3.5 flex items-center gap-3 shadow-sm">
-      <span className="text-xs font-bold text-sky-500 w-5 text-center tabular-nums">{index + 1}</span>
+    <div className="bg-slate-900 border border-white/10 rounded-2xl px-4 py-3.5 flex items-center gap-3">
+      <span className="text-xs font-bold text-cyan-400 w-5 text-center tabular-nums">{index + 1}</span>
       <div className="flex-1 min-w-0">
-        <p className="text-sm font-bold text-slate-900 truncate">{planned.exercise.name}</p>
-        <p className="text-xs text-slate-500 mt-0.5 tabular-nums">
+        <p className="text-sm font-bold text-white truncate">{planned.exercise.name}</p>
+        <p className="text-xs text-slate-400 mt-0.5 tabular-nums">
           {planned.targetSets}セット × {planned.targetReps}回 · {planned.targetWeight}kg
           {planned.weightSource === 'estimate' && (
-            <span className="ml-1.5 text-amber-500">推定</span>
+            <span className="ml-1.5 text-amber-400">推定</span>
           )}
         </p>
       </div>
       <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full
         ${planned.exercise.category === 'compound'
-          ? 'bg-sky-100 text-sky-700'
-          : 'bg-emerald-50 text-emerald-700 border border-emerald-100'
+          ? 'bg-cyan-500/15 text-cyan-400 border border-cyan-500/20'
+          : 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
         }`}>
         {planned.exercise.category === 'compound' ? '複合' : '単関節'}
       </span>
@@ -822,24 +815,24 @@ function RecordStep({
   return (
     <div className="px-4 py-5 space-y-4">
       {/* 種目ヘッダー */}
-      <div className="bg-white border border-sky-100 rounded-2xl px-4 py-4 shadow-sm">
+      <div className="bg-slate-900 border border-white/10 rounded-2xl px-4 py-4">
         <div className="flex items-start justify-between">
           <div>
-            <p className="text-xs text-slate-500 tabular-nums">{index + 1}/{total} 種目目</p>
-            <h2 className="text-lg font-bold text-slate-900 mt-0.5">{planned.exercise.name}</h2>
+            <p className="text-xs text-slate-400 tabular-nums">{index + 1}/{total} 種目目</p>
+            <h2 className="text-lg font-bold text-white mt-0.5">{planned.exercise.name}</h2>
           </div>
           <span className={`text-xs font-semibold px-2.5 py-1 rounded-full mt-0.5
             ${planned.exercise.category === 'compound'
-              ? 'bg-sky-100 text-sky-700'
-              : 'bg-emerald-50 text-emerald-700 border border-emerald-100'
+              ? 'bg-cyan-500/15 text-cyan-400 border border-cyan-500/20'
+              : 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
             }`}>
             {planned.exercise.category === 'compound' ? '複合' : '単関節'}
           </span>
         </div>
-        <div className="flex items-center gap-3 mt-3 text-sm text-slate-500 tabular-nums">
+        <div className="flex items-center gap-3 mt-3 text-sm text-slate-400 tabular-nums">
           <span>目安: {planned.targetWeight}kg × {planned.targetReps}回</span>
           {planned.weightSource === 'estimate' && (
-            <span className="text-amber-500 text-xs font-semibold">推定値</span>
+            <span className="text-amber-400 text-xs font-semibold">推定値</span>
           )}
         </div>
       </div>
@@ -851,7 +844,7 @@ function RecordStep({
           <button
             type="button"
             onClick={addSet}
-            className="text-xs text-sky-600 font-semibold hover:text-sky-700 active:scale-95 transition-all"
+            className="text-xs text-cyan-400 font-semibold hover:text-cyan-300 active:scale-95 transition-all"
           >
             + セット追加
           </button>
@@ -859,15 +852,15 @@ function RecordStep({
 
         {/* カラムヘッダー */}
         <div className="grid grid-cols-[2rem_1fr_1fr_2rem] gap-2 px-1 mb-1">
-          <span className="text-[10px] text-slate-400 text-center">#</span>
-          <span className="text-[10px] text-slate-400 text-center">重量 (kg)</span>
-          <span className="text-[10px] text-slate-400 text-center">回数</span>
+          <span className="text-[10px] text-slate-500 text-center">#</span>
+          <span className="text-[10px] text-slate-500 text-center">重量 (kg)</span>
+          <span className="text-[10px] text-slate-500 text-center">回数</span>
           <span />
         </div>
 
         {sets.map((s, i) => (
           <div key={i} className="grid grid-cols-[2rem_1fr_1fr_2rem] gap-2 items-center">
-            <span className="text-xs text-slate-400 text-center tabular-nums font-semibold">{i + 1}</span>
+            <span className="text-xs text-slate-500 text-center tabular-nums font-semibold">{i + 1}</span>
             <input
               type="number"
               value={s.weight}
@@ -875,9 +868,9 @@ function RecordStep({
               step="2.5"
               onChange={e => updateSet(i, 'weight', e.target.value)}
               aria-label={`セット${i + 1}の重量`}
-              className="bg-sky-50 border border-sky-200 rounded-xl px-3 py-2.5 text-center
-                text-sm font-bold tabular-nums text-slate-900
-                focus:outline-none focus:border-sky-400 focus:ring-2 focus:ring-sky-400/30
+              className="bg-slate-800 border border-white/10 rounded-xl px-3 py-2.5 text-center
+                text-sm font-bold tabular-nums text-white
+                focus:outline-none focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/30
                 transition-all w-full"
             />
             <input
@@ -887,16 +880,16 @@ function RecordStep({
               max="100"
               onChange={e => updateSet(i, 'reps', e.target.value)}
               aria-label={`セット${i + 1}の回数`}
-              className="bg-sky-50 border border-sky-200 rounded-xl px-3 py-2.5 text-center
-                text-sm font-bold tabular-nums text-slate-900
-                focus:outline-none focus:border-sky-400 focus:ring-2 focus:ring-sky-400/30
+              className="bg-slate-800 border border-white/10 rounded-xl px-3 py-2.5 text-center
+                text-sm font-bold tabular-nums text-white
+                focus:outline-none focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/30
                 transition-all w-full"
             />
             <button
               type="button"
               onClick={() => removeSet(i)}
               aria-label={`セット${i + 1}を削除`}
-              className="text-slate-300 hover:text-rose-400 active:scale-90 transition-all"
+              className="text-slate-600 hover:text-rose-400 active:scale-90 transition-all"
             >
               <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
                 <path d="M4 4L12 12M12 4L4 12" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/>
@@ -911,9 +904,9 @@ function RecordStep({
         <button
           type="button"
           onClick={handleSkip}
-          className="flex-1 h-12 bg-white border border-sky-200 text-slate-500 rounded-xl font-semibold text-sm
-            active:scale-[0.98] transition-all hover:border-sky-300
-            focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500"
+          className="flex-1 h-12 bg-slate-900 border border-white/10 text-slate-500 rounded-xl font-semibold text-sm
+            active:scale-[0.98] transition-all hover:border-white/20
+            focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500"
         >
           スキップ
         </button>
@@ -921,10 +914,10 @@ function RecordStep({
           type="button"
           onClick={handleSave}
           disabled={saving}
-          className="flex-[2] h-12 bg-sky-500 text-white rounded-xl font-bold
-            shadow-md shadow-sky-500/25 active:scale-[0.98] transition-all
-            hover:bg-sky-600 disabled:opacity-50
-            focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500"
+          className="flex-[2] h-12 bg-cyan-500 text-white rounded-xl font-bold
+            shadow-md shadow-cyan-500/25 active:scale-[0.98] transition-all
+            hover:bg-cyan-400 disabled:opacity-50
+            focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500"
         >
           記録して次へ →
         </button>
@@ -962,10 +955,9 @@ function SummaryStep({
   return (
     <div className="px-4 py-5 space-y-4 animate-fade-up">
       {/* 完了バナー */}
-      <div className="bg-sky-500 text-white rounded-3xl p-5 text-center">
-        <p className="text-4xl mb-2">🎉</p>
-        <h2 className="text-xl font-bold">お疲れさまでした！</h2>
-        <p className="text-sky-100 text-sm mt-1">お任せコース完了</p>
+      <div className="bg-gradient-to-r from-cyan-600 to-blue-700 text-white rounded-3xl p-5 text-center">
+        <h2 className="text-xl font-bold">お疲れさまでした</h2>
+        <p className="text-cyan-100 text-sm mt-1">お任せコース完了</p>
       </div>
 
       {/* 統計 */}
@@ -978,11 +970,11 @@ function SummaryStep({
 
       {/* PR バッジ */}
       {prs.length > 0 && (
-        <div className="bg-amber-50 border border-amber-200 rounded-2xl px-4 py-3.5">
-          <p className="text-sm font-bold text-amber-700 mb-2">🏆 自己ベスト更新！</p>
+        <div className="bg-amber-500/10 border border-amber-500/30 rounded-2xl px-4 py-3.5">
+          <p className="text-sm font-bold text-amber-400 mb-2">自己ベスト更新</p>
           <ul className="space-y-1">
             {prs.map(r => (
-              <li key={r.exerciseId} className="text-xs text-amber-600">
+              <li key={r.exerciseId} className="text-xs text-amber-400/80">
                 {getExName(r.exerciseId)} —{' '}
                 {[
                   r.prResult?.onermPR && '推定 1RM',
@@ -996,7 +988,7 @@ function SummaryStep({
 
       {/* スキップした種目 */}
       {skippedCount > 0 && (
-        <p className="text-xs text-slate-400 text-center">
+        <p className="text-xs text-slate-500 text-center">
           {skippedCount} 種目をスキップしました
         </p>
       )}
@@ -1006,20 +998,20 @@ function SummaryStep({
         <button
           type="button"
           onClick={onRestart}
-          className="flex-1 h-14 bg-white border border-sky-200 text-slate-700 rounded-2xl font-semibold
-            active:scale-[0.98] transition-all hover:border-sky-300
-            focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500"
+          className="flex-1 h-14 bg-slate-900 border border-white/10 text-slate-300 rounded-2xl font-semibold
+            active:scale-[0.98] transition-all hover:border-white/20
+            focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500"
         >
           もう一度
         </button>
         <button
           type="button"
           onClick={onOpenDashboard}
-          className="flex-[2] h-14 bg-sky-500 text-white rounded-2xl text-base font-bold
-            shadow-lg shadow-sky-500/25 active:scale-[0.98] transition-all
-            hover:bg-sky-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 focus-visible:ring-offset-2"
+          className="flex-[2] h-14 bg-gradient-to-r from-cyan-500 to-blue-600 text-white rounded-2xl text-base font-bold
+            shadow-lg shadow-cyan-500/25 active:scale-[0.98] transition-all
+            hover:from-cyan-400 hover:to-blue-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950"
         >
-          📊 記録を確認する
+          記録を確認する
         </button>
       </div>
     </div>
@@ -1028,10 +1020,10 @@ function SummaryStep({
 
 function StatChip({ label, value, unit }: { label: string; value: string; unit: string }) {
   return (
-    <div className="bg-white border border-sky-100 rounded-2xl px-4 py-3 shadow-sm">
-      <p className="text-[10px] text-slate-400 uppercase tracking-wider font-semibold">{label}</p>
-      <p className="text-xl font-bold text-slate-900 mt-0.5 tabular-nums">
-        {value}<span className="text-xs font-normal text-slate-500 ml-1">{unit}</span>
+    <div className="bg-slate-900 border border-white/10 rounded-2xl px-4 py-3">
+      <p className="text-[10px] text-slate-500 uppercase tracking-wider font-semibold">{label}</p>
+      <p className="text-xl font-bold text-white mt-0.5 tabular-nums">
+        {value}<span className="text-xs font-normal text-slate-400 ml-1">{unit}</span>
       </p>
     </div>
   )

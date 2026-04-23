@@ -19,21 +19,21 @@ interface Props {
 
 export default function SettingsScreen({ onBack, onDataCleared }: Props) {
   return (
-    <div className="flex flex-col min-h-screen bg-sky-50">
+    <div className="flex flex-col min-h-screen bg-slate-950">
 
       {/* ヘッダー */}
-      <div className="sticky top-0 z-10 px-4 pt-safe pb-3 bg-white/95 backdrop-blur-sm border-b border-sky-100">
+      <div className="sticky top-0 z-10 px-4 pt-safe pb-3 bg-slate-950/95 backdrop-blur-sm border-b border-white/10">
         <div className="flex items-center gap-3">
           <button
             type="button"
             onClick={onBack}
-            className="text-sky-600 hover:text-sky-700 p-1 -ml-1 rounded-lg
-              active:scale-95 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500"
+            className="text-cyan-400 hover:text-cyan-300 p-1 -ml-1 rounded-lg
+              active:scale-95 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500"
             aria-label="戻る"
           >
             <BackIcon />
           </button>
-          <h1 className="text-lg font-bold tracking-tight text-slate-900">設定</h1>
+          <h1 className="text-lg font-bold tracking-tight text-white">設定</h1>
         </div>
       </div>
 
@@ -93,10 +93,10 @@ function ProfileSection() {
               onClick={() => setGender(g)}
               aria-pressed={gender === g}
               className={`h-11 rounded-xl text-sm font-semibold transition-all active:scale-[0.97]
-                focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 focus-visible:ring-offset-1
+                focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500 focus-visible:ring-offset-1 focus-visible:ring-offset-slate-900
                 ${gender === g
-                  ? 'bg-sky-500 text-white shadow-md shadow-sky-500/20'
-                  : 'bg-sky-50 text-slate-600 border border-sky-200 hover:bg-sky-100'}`}
+                  ? 'bg-cyan-500 text-white shadow-md shadow-cyan-500/20'
+                  : 'bg-slate-800 text-slate-300 border border-white/10 hover:bg-slate-700 hover:border-white/20'}`}
             >
               {g === 'male' ? '男性' : '女性'}
             </button>
@@ -128,10 +128,10 @@ function ProfileSection() {
         type="button"
         onClick={handleSave}
         className={`w-full h-12 rounded-xl text-sm font-bold transition-all active:scale-[0.98]
-          focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500
+          focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500
           ${saved
             ? 'bg-emerald-500 text-white'
-            : 'bg-sky-500 hover:bg-sky-600 text-white shadow-md shadow-sky-500/20'}`}
+            : 'bg-cyan-500 hover:bg-cyan-400 text-white shadow-md shadow-cyan-500/20'}`}
       >
         {saved ? '✓ 保存しました' : '保存'}
       </button>
@@ -158,10 +158,10 @@ function DisplaySection() {
     <SectionCard title="表示設定">
       <div className="space-y-2">
         <div className="flex items-center justify-between">
-          <p className="text-sm font-semibold text-slate-700">週の始まり</p>
-          {saved && <span className="text-xs text-emerald-500 font-semibold">✓ 保存</span>}
+          <p className="text-sm font-semibold text-slate-200">週の始まり</p>
+          {saved && <span className="text-xs text-emerald-400 font-semibold">✓ 保存</span>}
         </div>
-        <p className="text-xs text-slate-400 leading-relaxed">
+        <p className="text-xs text-slate-500 leading-relaxed">
           週次集計の区切りに使用します（現バージョンでは月曜始まりの統計が既定）。
         </p>
         <div className="grid grid-cols-2 gap-2" role="group" aria-label="週の始まり選択">
@@ -175,10 +175,10 @@ function DisplaySection() {
               onClick={() => handleChange(opt.value)}
               aria-pressed={weekStart === opt.value}
               className={`h-11 rounded-xl text-sm font-semibold transition-all active:scale-[0.97]
-                focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 focus-visible:ring-offset-1
+                focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500 focus-visible:ring-offset-1 focus-visible:ring-offset-slate-900
                 ${weekStart === opt.value
-                  ? 'bg-sky-500 text-white shadow-md shadow-sky-500/20'
-                  : 'bg-sky-50 text-slate-600 border border-sky-200 hover:bg-sky-100'}`}
+                  ? 'bg-cyan-500 text-white shadow-md shadow-cyan-500/20'
+                  : 'bg-slate-800 text-slate-300 border border-white/10 hover:bg-slate-700 hover:border-white/20'}`}
             >
               {opt.label}
             </button>
@@ -213,8 +213,8 @@ function DataSection({ onDataCleared }: { onDataCleared: () => void }) {
       <div className="space-y-1.5">
         <div className="flex items-center justify-between">
           <div>
-            <p className="text-sm font-semibold text-slate-700">CSV エクスポート</p>
-            <p className="text-xs text-slate-400 mt-0.5">
+            <p className="text-sm font-semibold text-slate-200">CSV エクスポート</p>
+            <p className="text-xs text-slate-500 mt-0.5">
               {hasData ? `${records.length} 件のレコードをダウンロード` : 'まだ記録がありません'}
             </p>
           </div>
@@ -223,33 +223,33 @@ function DataSection({ onDataCleared }: { onDataCleared: () => void }) {
             onClick={handleExport}
             disabled={!hasData}
             className="px-4 py-2 rounded-xl text-sm font-semibold transition-all active:scale-[0.97]
-              focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500
+              focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500
               disabled:opacity-40 disabled:cursor-not-allowed
-              bg-sky-50 border border-sky-200 text-sky-700 hover:bg-sky-100 hover:border-sky-300"
+              bg-slate-800 border border-white/10 text-cyan-400 hover:bg-slate-700 hover:border-white/20"
           >
             CSV
           </button>
         </div>
       </div>
 
-      <div className="border-t border-sky-50 pt-3 space-y-3">
+      <div className="border-t border-white/5 pt-3 space-y-3">
         {/* 削除確認 */}
         {!confirmDelete ? (
           <button
             type="button"
             onClick={() => setConfirmDelete(true)}
             className="w-full h-11 rounded-xl text-sm font-semibold
-              text-rose-500 border border-rose-200 bg-rose-50
-              hover:bg-rose-100 hover:border-rose-300
+              text-rose-400 border border-rose-500/30 bg-rose-500/10
+              hover:bg-rose-500/15 hover:border-rose-500/40
               active:scale-[0.98] transition-all
               focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-400"
           >
             データをすべて削除
           </button>
         ) : (
-          <div className="bg-rose-50 border border-rose-200 rounded-2xl p-4 space-y-3">
-            <p className="text-sm font-bold text-rose-700">本当に削除しますか？</p>
-            <p className="text-xs text-rose-600 leading-relaxed">
+          <div className="bg-rose-500/10 border border-rose-500/30 rounded-2xl p-4 space-y-3">
+            <p className="text-sm font-bold text-rose-400">本当に削除しますか？</p>
+            <p className="text-xs text-rose-400/80 leading-relaxed">
               プロフィール・すべてのトレーニング記録・設定が削除されます。この操作は元に戻せません。
             </p>
             <div className="flex gap-2">
@@ -257,8 +257,8 @@ function DataSection({ onDataCleared }: { onDataCleared: () => void }) {
                 type="button"
                 onClick={() => setConfirmDelete(false)}
                 className="flex-1 h-10 rounded-xl text-sm font-semibold
-                  bg-white border border-rose-200 text-slate-600
-                  hover:bg-rose-50 active:scale-[0.97] transition-all
+                  bg-slate-800 border border-rose-500/30 text-slate-300
+                  hover:bg-slate-700 active:scale-[0.97] transition-all
                   focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-400"
               >
                 キャンセル
@@ -276,7 +276,7 @@ function DataSection({ onDataCleared }: { onDataCleared: () => void }) {
             </div>
           </div>
         )}
-        <p className="text-[10px] text-slate-400 leading-relaxed px-0.5">
+        <p className="text-[10px] text-slate-500 leading-relaxed px-0.5">
           削除後はタイトル画面に戻り、プロフィールの再設定が必要です。
         </p>
       </div>
@@ -295,10 +295,10 @@ function AboutSection() {
         <Row label="バージョン" value={APP_VERSION} />
         <Row label="データ保存場所" value="端末内（LocalStorage）" />
       </div>
-      <div className="border-t border-sky-50 pt-3">
-        <p className="text-xs text-slate-400 leading-relaxed">
+      <div className="border-t border-white/5 pt-3">
+        <p className="text-xs text-slate-500 leading-relaxed">
           表示される目安重量（1RM・初回推定値）は Epley 式および一般的な初心者基準値をもとにした
-          <strong className="text-slate-600 font-semibold">参考値</strong>です。
+          <strong className="text-slate-300 font-semibold">参考値</strong>です。
           実際のトレーニングでは必ず余裕を持った重量から始め、体調に合わせて調整してください。
           本アプリは医療・健康指導の代替ではありません。
         </p>
@@ -313,9 +313,9 @@ function AboutSection() {
 
 function SectionCard({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <div className="bg-white border border-sky-100 rounded-2xl shadow-sm overflow-hidden">
-      <div className="px-4 py-3 border-b border-sky-50">
-        <p className="text-xs font-bold text-sky-600 uppercase tracking-wider">{title}</p>
+    <div className="bg-slate-900 border border-white/10 rounded-2xl overflow-hidden">
+      <div className="px-4 py-3 border-b border-white/5">
+        <p className="text-xs font-bold text-cyan-400 uppercase tracking-wider">{title}</p>
       </div>
       <div className="px-4 py-4 space-y-4">
         {children}
@@ -342,16 +342,16 @@ function NumberField({
           inputMode="decimal"
           aria-invalid={!!error}
           aria-describedby={error ? `${id}-error` : undefined}
-          className={`w-full h-12 bg-white border rounded-xl px-4 pr-14
-            text-base font-semibold tabular-nums text-right text-slate-900
-            focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 transition-shadow
-            ${error ? 'border-red-400 ring-2 ring-red-400/40' : 'border-sky-200'}`}
+          className={`w-full h-12 bg-slate-800 border rounded-xl px-4 pr-14
+            text-base font-semibold tabular-nums text-right text-white
+            focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500 transition-shadow
+            ${error ? 'border-red-400 ring-2 ring-red-400/40' : 'border-white/10'}`}
         />
-        <span className="absolute right-4 top-1/2 -translate-y-1/2 text-sm text-slate-400 font-medium pointer-events-none">
+        <span className="absolute right-4 top-1/2 -translate-y-1/2 text-sm text-slate-500 font-medium pointer-events-none">
           {unit}
         </span>
       </div>
-      {error && <p id={`${id}-error`} className="text-red-500 text-xs">{error}</p>}
+      {error && <p id={`${id}-error`} className="text-red-400 text-xs">{error}</p>}
     </div>
   )
 }
@@ -359,8 +359,8 @@ function NumberField({
 function Row({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex items-center justify-between">
-      <span className="text-sm text-slate-500">{label}</span>
-      <span className="text-sm font-semibold text-slate-700 tabular-nums">{value}</span>
+      <span className="text-sm text-slate-400">{label}</span>
+      <span className="text-sm font-semibold text-slate-300 tabular-nums">{value}</span>
     </div>
   )
 }

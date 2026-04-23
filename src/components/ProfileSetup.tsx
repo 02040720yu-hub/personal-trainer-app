@@ -42,16 +42,31 @@ export default function ProfileSetup({ onComplete }: Props) {
     setErrors(prev => ({ ...prev, [key]: '' }))
 
   return (
-    <div className="flex flex-col min-h-screen px-4 pt-safe bg-white">
+    <div className="flex flex-col min-h-screen px-4 pt-safe bg-slate-950">
       <div className="flex-1 flex flex-col justify-center gap-10">
 
         {/* Hero */}
         <div className="text-center">
-          <div className="w-20 h-20 bg-sky-100 rounded-3xl flex items-center justify-center mx-auto mb-5">
-            <span className="text-4xl" role="img" aria-label="ダンベル">🏋️</span>
+          <div className="relative mx-auto w-20 h-20 mb-5">
+            <div className="absolute inset-0 bg-cyan-500/20 rounded-3xl blur-lg" />
+            <div className="relative w-20 h-20 bg-slate-900 border border-cyan-500/30 rounded-3xl
+              flex items-center justify-center shadow-[0_0_24px_rgba(6,182,212,0.15)]">
+              <svg width="36" height="36" viewBox="0 0 44 44" fill="none" aria-hidden="true">
+                <path d="M22 28c-6 0-10-4.5-10-10V8h20v10c0 5.5-4 10-10 10Z" stroke="url(#pg)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                <path d="M12 12H6a4 4 0 0 0 4 4" stroke="url(#pg)" strokeWidth="2" strokeLinecap="round"/>
+                <path d="M32 12h6a4 4 0 0 1-4 4" stroke="url(#pg)" strokeWidth="2" strokeLinecap="round"/>
+                <path d="M22 28v6" stroke="url(#pg)" strokeWidth="2" strokeLinecap="round"/>
+                <path d="M15 34h14" stroke="url(#pg)" strokeWidth="2" strokeLinecap="round"/>
+                <defs>
+                  <linearGradient id="pg" x1="6" y1="8" x2="38" y2="36" gradientUnits="userSpaceOnUse">
+                    <stop stopColor="#22d3ee"/><stop offset="1" stopColor="#3b82f6"/>
+                  </linearGradient>
+                </defs>
+              </svg>
+            </div>
           </div>
-          <h1 className="text-2xl font-bold tracking-tight text-slate-900">筋トレ記録</h1>
-          <p className="text-slate-500 text-sm mt-2 leading-relaxed">
+          <h1 className="text-2xl font-bold tracking-tight text-white">筋トレ記録</h1>
+          <p className="text-slate-400 text-sm mt-2 leading-relaxed">
             初回目標重量の算出のため
             <br />
             プロフィールを入力してください
@@ -72,10 +87,10 @@ export default function ProfileSetup({ onComplete }: Props) {
                   aria-pressed={gender === g}
                   className={`h-12 rounded-xl text-sm font-semibold transition-all duration-100
                     active:scale-[0.97]
-                    focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 focus-visible:ring-offset-2
+                    focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950
                     ${gender === g
-                      ? 'bg-sky-500 text-white shadow-lg shadow-sky-500/25'
-                      : 'bg-sky-50 text-slate-600 border border-sky-200 hover:bg-sky-100 hover:border-sky-300'
+                      ? 'bg-cyan-500 text-white shadow-lg shadow-cyan-500/25'
+                      : 'bg-slate-800 text-slate-300 border border-white/10 hover:bg-slate-700 hover:border-white/20'
                     }`}
                 >
                   {g === 'male' ? '男性' : '女性'}
@@ -96,16 +111,16 @@ export default function ProfileSetup({ onComplete }: Props) {
                 inputMode="decimal"
                 aria-invalid={!!errors.height}
                 aria-describedby={errors.height ? 'height-error' : undefined}
-                className={`w-full h-14 bg-white border rounded-xl px-4 text-xl font-semibold tabular-nums text-right pr-14
-                  text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 transition-shadow
-                  ${errors.height ? 'border-red-400 ring-2 ring-red-400/40' : 'border-sky-200'}`}
+                className={`w-full h-14 bg-slate-800 border rounded-xl px-4 text-xl font-semibold tabular-nums text-right pr-14
+                  text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500 transition-shadow
+                  ${errors.height ? 'border-red-400 ring-2 ring-red-400/40' : 'border-white/10'}`}
               />
-              <span className="absolute right-4 top-1/2 -translate-y-1/2 text-sm text-slate-400 font-medium pointer-events-none select-none">
+              <span className="absolute right-4 top-1/2 -translate-y-1/2 text-sm text-slate-500 font-medium pointer-events-none select-none">
                 cm
               </span>
             </div>
             {errors.height && (
-              <p id="height-error" className="text-red-500 text-xs">{errors.height}</p>
+              <p id="height-error" className="text-red-400 text-xs">{errors.height}</p>
             )}
           </div>
 
@@ -121,16 +136,16 @@ export default function ProfileSetup({ onComplete }: Props) {
                 inputMode="decimal"
                 aria-invalid={!!errors.weight}
                 aria-describedby={errors.weight ? 'weight-error' : undefined}
-                className={`w-full h-14 bg-white border rounded-xl px-4 text-xl font-semibold tabular-nums text-right pr-14
-                  text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 transition-shadow
-                  ${errors.weight ? 'border-red-400 ring-2 ring-red-400/40' : 'border-sky-200'}`}
+                className={`w-full h-14 bg-slate-800 border rounded-xl px-4 text-xl font-semibold tabular-nums text-right pr-14
+                  text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500 transition-shadow
+                  ${errors.weight ? 'border-red-400 ring-2 ring-red-400/40' : 'border-white/10'}`}
               />
-              <span className="absolute right-4 top-1/2 -translate-y-1/2 text-sm text-slate-400 font-medium pointer-events-none select-none">
+              <span className="absolute right-4 top-1/2 -translate-y-1/2 text-sm text-slate-500 font-medium pointer-events-none select-none">
                 kg
               </span>
             </div>
             {errors.weight && (
-              <p id="weight-error" className="text-red-500 text-xs">{errors.weight}</p>
+              <p id="weight-error" className="text-red-400 text-xs">{errors.weight}</p>
             )}
           </div>
 
@@ -142,10 +157,11 @@ export default function ProfileSetup({ onComplete }: Props) {
         <button
           type="button"
           onClick={handleSubmit}
-          className="w-full h-14 bg-sky-500 hover:bg-sky-400 active:bg-sky-600 active:scale-[0.98]
+          className="w-full h-14 bg-gradient-to-r from-cyan-500 to-blue-600
+            hover:from-cyan-400 hover:to-blue-500 active:scale-[0.98]
             text-white text-base font-bold rounded-xl transition-all
-            shadow-lg shadow-sky-500/25
-            focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 focus-visible:ring-offset-2"
+            shadow-[0_0_24px_rgba(6,182,212,0.35)]
+            focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950"
         >
           はじめる
         </button>

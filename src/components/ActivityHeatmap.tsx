@@ -20,11 +20,11 @@ const DOW_LABELS = ['月', '火', '水', '木', '金', '土', '日']
 
 /** 強度レベル → Tailwind クラス */
 const LEVEL_CLASSES: Record<number, string> = {
-  0: 'bg-slate-100 border border-slate-200',
-  1: 'bg-sky-200',
-  2: 'bg-sky-400',
-  3: 'bg-sky-600',
-  4: 'bg-sky-800',
+  0: 'bg-slate-800 border border-slate-700',
+  1: 'bg-cyan-950',
+  2: 'bg-cyan-700',
+  3: 'bg-cyan-500',
+  4: 'bg-cyan-300',
 }
 
 const MONTH_OPTIONS = [
@@ -52,28 +52,28 @@ export default function ActivityHeatmap({ onBack }: Props) {
   const stats = useMemo(() => calcHeatmapStats(monthData), [monthData])
 
   return (
-    <div className="flex flex-col min-h-screen bg-sky-50">
+    <div className="flex flex-col min-h-screen bg-slate-950">
 
       {/* ヘッダー */}
-      <div className="sticky top-0 z-10 px-4 pt-safe pb-3 bg-white/95 backdrop-blur-sm border-b border-sky-100">
+      <div className="sticky top-0 z-10 px-4 pt-safe pb-3 bg-slate-950/95 backdrop-blur-sm border-b border-white/10">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <button
               type="button"
               onClick={onBack}
-              className="text-sky-600 hover:text-sky-700 p-1 -ml-1 rounded-lg
-                active:scale-95 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500"
+              className="text-cyan-400 hover:text-cyan-300 p-1 -ml-1 rounded-lg
+                active:scale-95 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500"
               aria-label="戻る"
             >
               <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
                 <path d="M12 15L7 10L12 5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
               </svg>
             </button>
-            <h1 className="text-lg font-bold tracking-tight text-slate-900">活動カレンダー</h1>
+            <h1 className="text-lg font-bold tracking-tight text-white">活動カレンダー</h1>
           </div>
 
           {/* 期間切り替え */}
-          <div className="flex gap-1 bg-sky-50 rounded-xl p-1 border border-sky-100">
+          <div className="flex gap-1 bg-slate-900 rounded-xl p-1 border border-white/10">
             {MONTH_OPTIONS.map(opt => (
               <button
                 key={opt.value}
@@ -81,10 +81,10 @@ export default function ActivityHeatmap({ onBack }: Props) {
                 onClick={() => setMonthCount(opt.value)}
                 aria-pressed={monthCount === opt.value}
                 className={`px-3 py-1 rounded-lg text-xs font-semibold transition-all
-                  focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500
+                  focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500
                   ${monthCount === opt.value
-                    ? 'bg-sky-500 text-white shadow-sm'
-                    : 'text-slate-500 hover:text-slate-700'
+                    ? 'bg-cyan-500 text-white shadow-sm'
+                    : 'text-slate-500 hover:text-slate-300'
                   }`}
               >
                 {opt.label}
@@ -153,11 +153,11 @@ function StatsRow({
 
 function StatCard({ label, value, unit }: { label: string; value: string; unit: string }) {
   return (
-    <div className="bg-white border border-sky-100 rounded-2xl px-3 py-3 shadow-sm text-center">
-      <p className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider leading-tight">{label}</p>
-      <p className="text-lg font-bold text-slate-900 mt-1 tabular-nums leading-none">
+    <div className="bg-slate-900 border border-white/10 rounded-2xl px-3 py-3 text-center">
+      <p className="text-[10px] text-slate-500 font-semibold uppercase tracking-wider leading-tight">{label}</p>
+      <p className="text-lg font-bold text-white mt-1 tabular-nums leading-none">
         {value}
-        {unit && <span className="text-xs font-normal text-slate-500 ml-0.5">{unit}</span>}
+        {unit && <span className="text-xs font-normal text-slate-400 ml-0.5">{unit}</span>}
       </p>
     </div>
   )
@@ -169,17 +169,17 @@ function StatCard({ label, value, unit }: { label: string; value: string; unit: 
 
 function MonthCalendar({ month }: { month: MonthData }) {
   return (
-    <div className="bg-white border border-sky-100 rounded-2xl shadow-sm overflow-hidden">
+    <div className="bg-slate-900 border border-white/10 rounded-2xl overflow-hidden">
       {/* 月ラベル */}
-      <div className="px-4 py-3 border-b border-sky-50">
-        <p className="text-sm font-bold text-slate-700">{month.label}</p>
+      <div className="px-4 py-3 border-b border-white/5">
+        <p className="text-sm font-bold text-slate-200">{month.label}</p>
       </div>
 
       <div className="px-3 py-3">
         {/* 曜日ヘッダー */}
         <div className="grid grid-cols-7 mb-1.5">
           {DOW_LABELS.map(dow => (
-            <p key={dow} className="text-center text-[10px] text-slate-400 font-semibold">{dow}</p>
+            <p key={dow} className="text-center text-[10px] text-slate-500 font-semibold">{dow}</p>
           ))}
         </div>
 
@@ -226,13 +226,13 @@ function DayCell({ day }: { day: DayData }) {
     <div
       className={`aspect-square rounded-lg flex flex-col items-center justify-center relative
         ${LEVEL_CLASSES[day.level]}
-        ${isToday ? 'ring-2 ring-sky-500 ring-offset-1' : ''}
+        ${isToday ? 'ring-2 ring-cyan-400 ring-offset-1 ring-offset-slate-900' : ''}
         `}
       title={titleText}
       aria-label={`${day.date.getDate()}日${day.volume > 0 ? ` ボリューム${volLabel}` : ''}${day.hasQuick ? ' お任せ実施' : ''}`}
     >
       <span className={`text-[9px] leading-none font-semibold tabular-nums
-        ${day.level === 0 ? 'text-slate-300' : day.level <= 2 ? 'text-sky-900' : 'text-white'}`}>
+        ${day.level === 0 ? 'text-slate-600' : day.level <= 2 ? 'text-slate-100' : 'text-slate-900'}`}>
         {day.date.getDate()}
       </span>
       {day.hasQuick && (
@@ -251,8 +251,8 @@ function DayCell({ day }: { day: DayData }) {
 
 function Legend() {
   return (
-    <div className="bg-white border border-sky-100 rounded-2xl shadow-sm px-4 py-3">
-      <p className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider mb-2">
+    <div className="bg-slate-900 border border-white/10 rounded-2xl px-4 py-3">
+      <p className="text-[10px] text-slate-500 font-semibold uppercase tracking-wider mb-2">
         強度（ボリューム / 日）
       </p>
       <div className="flex items-center gap-2 flex-wrap">
@@ -262,11 +262,11 @@ function Legend() {
         <LegendItem level={3} label="〜9,999 kg" />
         <LegendItem level={4} label="10,000 kg〜" />
       </div>
-      <div className="flex items-center gap-1.5 mt-2 pt-2 border-t border-sky-50">
-        <div className="relative w-4 h-4 rounded bg-sky-200">
+      <div className="flex items-center gap-1.5 mt-2 pt-2 border-t border-white/5">
+        <div className="relative w-4 h-4 rounded bg-cyan-700">
           <div className="absolute bottom-0.5 right-0.5 w-1.5 h-1.5 rounded-full bg-amber-400" aria-hidden="true" />
         </div>
-        <span className="text-[10px] text-slate-500">お任せ実施日</span>
+        <span className="text-[10px] text-slate-400">お任せ実施日</span>
       </div>
     </div>
   )
