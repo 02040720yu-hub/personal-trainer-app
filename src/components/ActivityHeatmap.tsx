@@ -217,19 +217,30 @@ function DayCell({ day }: { day: DayData }) {
       ? `${day.volume}kg`
       : ''
 
+  const titleText = [
+    day.volume > 0 ? `${day.dateKey} ${volLabel}` : day.dateKey,
+    day.hasQuick ? '（お任せ実施）' : '',
+  ].join('')
+
   return (
     <div
-      className={`aspect-square rounded-lg flex flex-col items-center justify-center
+      className={`aspect-square rounded-lg flex flex-col items-center justify-center relative
         ${LEVEL_CLASSES[day.level]}
         ${isToday ? 'ring-2 ring-sky-500 ring-offset-1' : ''}
         `}
-      title={day.volume > 0 ? `${day.dateKey} ${volLabel}` : day.dateKey}
-      aria-label={`${day.date.getDate()}日${day.volume > 0 ? ` ボリューム${volLabel}` : ''}`}
+      title={titleText}
+      aria-label={`${day.date.getDate()}日${day.volume > 0 ? ` ボリューム${volLabel}` : ''}${day.hasQuick ? ' お任せ実施' : ''}`}
     >
       <span className={`text-[9px] leading-none font-semibold tabular-nums
         ${day.level === 0 ? 'text-slate-300' : day.level <= 2 ? 'text-sky-900' : 'text-white'}`}>
         {day.date.getDate()}
       </span>
+      {day.hasQuick && (
+        <div
+          className="absolute bottom-0.5 right-0.5 w-1.5 h-1.5 rounded-full bg-amber-400"
+          aria-hidden="true"
+        />
+      )}
     </div>
   )
 }
@@ -250,6 +261,12 @@ function Legend() {
         <LegendItem level={2} label="〜4,999 kg" />
         <LegendItem level={3} label="〜9,999 kg" />
         <LegendItem level={4} label="10,000 kg〜" />
+      </div>
+      <div className="flex items-center gap-1.5 mt-2 pt-2 border-t border-sky-50">
+        <div className="relative w-4 h-4 rounded bg-sky-200">
+          <div className="absolute bottom-0.5 right-0.5 w-1.5 h-1.5 rounded-full bg-amber-400" aria-hidden="true" />
+        </div>
+        <span className="text-[10px] text-slate-500">お任せ実施日</span>
       </div>
     </div>
   )

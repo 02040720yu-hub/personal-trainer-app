@@ -27,6 +27,8 @@ export interface DayData {
   volume: number
   /** 強度レベル 0〜4 */
   level: IntensityLevel
+  /** その日に source==='quick' の記録が1件以上あるか */
+  hasQuick: boolean
 }
 
 export interface MonthData {
@@ -73,6 +75,17 @@ export function getVolumeLevel(volume: number): IntensityLevel {
   return 4
 }
 
+/** source === 'quick' の記録が存在する日付の集合（dateKey 形式）を返す */
+export function aggregateQuickDaySet(records: WorkoutRecord[]): Set<string> {
+  const set = new Set<string>()
+  for (const r of records) {
+    if (r.source === 'quick') {
+      set.add(toDateKey(new Date(r.date)))
+    }
+  }
+  return set
+}
+
 /**
  * レコードを日付ごとのボリュームに集計する（Map<dateKey, volume>）
  */
@@ -95,6 +108,7 @@ export function buildMonthlyHeatmap(
   months: number,
 ): MonthData[] {
   const volumeByDay = aggregateVolumeByDay(records)
+  const quickDays = aggregateQuickDaySet(records)
   const now = new Date()
   const result: MonthData[] = []
 
@@ -113,7 +127,7 @@ export function buildMonthlyHeatmap(
       const date    = new Date(year, month, day)
       const dateKey = toDateKey(date)
       const volume  = volumeByDay.get(dateKey) ?? 0
-      days.push({ date, dateKey, volume, level: getVolumeLevel(volume) })
+      days.push({ date, dateKey, volume, level: getVolumeLevel(volume), hasQuick: quickDays.has(dateKey) })
     }
 
     result.push({

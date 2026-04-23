@@ -19,53 +19,51 @@ import ActivityHeatmap   from './components/ActivityHeatmap'
 
 /**
  * アプリ最上位レイヤー
- *  title    : ランディング（初回のみ表示。プロフィール設定済みなら main 直入り）
- *  main     : アプリ本体（部位選択・種目・セッション・履歴・統計・ヒートマップ）
+ *  title    : ランディング（初回のみ。プロフィール設定済みなら main 直入り）
+ *  main     : アプリ本体
  *  settings : 設定画面
  */
 type AppLayer = 'title' | 'main' | 'settings'
 
 /**
  * メイン画面内の遷移スタック
- * profile は初回オンボーディング専用（main 内では出現しない）
+ *
+ * 主導線: quick（お任せハブ） → dashboard / heatmap / history
+ * 予備導線（将来用・通常 UI からは非到達）: home / exercises / session
  */
 type MainScreen =
-  | 'home'
-  | 'exercises'
-  | 'session'
-  | 'history'
-  | 'dashboard'
   | 'quick'
+  | 'dashboard'
   | 'heatmap'
+  | 'history'
+  | 'home'      // 将来用: 手動種目選択の入口（通常導線から除外）
+  | 'exercises' // 将来用
+  | 'session'   // 将来用
 
 // ─────────────────────────────────────────────────────────────────────────────
 // App
 // ─────────────────────────────────────────────────────────────────────────────
 
 export default function App() {
-  // プロフィール設定済みなら main 直入り（UX: トレ開始までの手数を最小化）
+  // プロフィール設定済みなら main 直入り
   const [layer, setLayer] = useState<AppLayer>(() =>
     getProfile() ? 'main' : 'title'
   )
-  // プロフィール設定済みなら起動時は直接お任せ画面へ（主導線）
-  const [mainScreen, setMainScreen] = useState<MainScreen>(() =>
-    getProfile() ? 'quick' : 'home'
-  )
+  // 常に quick（お任せハブ）を起点とする
+  const [mainScreen, setMainScreen] = useState<MainScreen>('quick')
+
+  // 将来用: 手動種目選択フローのための状態（通常導線では使用しない）
   const [selectedBodyPart, setSelectedBodyPart] = useState<BodyPart | null>(null)
   const [selectedExercise, setSelectedExercise] = useState<Exercise | null>(null)
 
-  const goHome = () => {
-    setSelectedBodyPart(null)
-    setSelectedExercise(null)
-    setMainScreen('home')
-  }
+  /** quick に戻る（全画面の「戻る」先） */
+  const goQuick = () => setMainScreen('quick')
 
   const openSettings = () => setLayer('settings')
   const closeSettings = () => setLayer('main')
 
   const handleDataCleared = () => {
-    // データ全削除後はタイトルへ
-    goHome()
+    goQuick()
     setLayer('title')
   }
 
@@ -76,7 +74,10 @@ export default function App() {
         {/* ── タイトル ─────────────────────────────────────────── */}
         {layer === 'title' && (
           <TitleScreen
-            onEnterMain={() => setLayer('main')}
+            onEnterMain={() => {
+              setMainScreen('quick')
+              setLayer('main')
+            }}
             onOpenSettings={openSettings}
           />
         )}
@@ -92,6 +93,29 @@ export default function App() {
         {/* ── メイン ───────────────────────────────────────────── */}
         {layer === 'main' && (
           <>
+            {/* ── 主導線 ── */}
+            {mainScreen === 'quick' && (
+              <QuickWorkout
+                onOpenDashboard={() => setMainScreen('dashboard')}
+                onOpenHeatmap={() => setMainScreen('heatmap')}
+                onOpenSettings={openSettings}
+                onOpenTitle={() => setLayer('title')}
+              />
+            )}
+
+            {mainScreen === 'dashboard' && (
+              <Dashboard onBack={goQuick} />
+            )}
+
+            {mainScreen === 'heatmap' && (
+              <ActivityHeatmap onBack={goQuick} />
+            )}
+
+            {mainScreen === 'history' && (
+              <WorkoutHistory onBack={goQuick} />
+            )}
+
+            {/* ── 将来用: 手動種目選択（通常導線から非到達） ── */}
             {mainScreen === 'home' && (
               <BodyPartSelector
                 onSelect={bodyPart => {
@@ -100,7 +124,7 @@ export default function App() {
                 }}
                 onHistoryClick={() => setMainScreen('history')}
                 onDashboardClick={() => setMainScreen('dashboard')}
-                onQuickClick={() => setMainScreen('quick')}
+                onQuickClick={goQuick}
                 onHeatmapClick={() => setMainScreen('heatmap')}
                 onSettingsClick={openSettings}
                 onTitleClick={() => setLayer('title')}
@@ -122,24 +146,8 @@ export default function App() {
               <WorkoutSession
                 exercise={selectedExercise}
                 onBack={() => setMainScreen('exercises')}
-                onHome={goHome}
+                onHome={goQuick}
               />
-            )}
-
-            {mainScreen === 'history' && (
-              <WorkoutHistory onBack={() => setMainScreen('home')} />
-            )}
-
-            {mainScreen === 'dashboard' && (
-              <Dashboard onBack={() => setMainScreen('home')} />
-            )}
-
-            {mainScreen === 'quick' && (
-              <QuickWorkout onBack={() => setMainScreen('home')} />
-            )}
-
-            {mainScreen === 'heatmap' && (
-              <ActivityHeatmap onBack={() => setMainScreen('home')} />
             )}
           </>
         )}

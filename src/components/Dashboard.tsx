@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react'
+import type { WorkoutRecord } from '../types'
 import { getAllRecords } from '../lib/storage'
 import { loadGoals, saveGoals, type WeeklyGoals } from '../lib/goals'
 import { exportToCsv } from '../lib/export'
@@ -37,25 +38,21 @@ interface Props {
 
 // ────────────────────────────────────────────────────────────────────────────
 export default function Dashboard({ onBack }: Props) {
-  const [tab, setTab]       = useState<DashTab>('summary')
-  const [period, setPeriod] = useState<Period>('week')
+  const [tab, setTab]               = useState<DashTab>('summary')
+  const [progressPeriod, setProgressPeriod] = useState<Period>('week')  // progress タブ専用
 
   const records = getAllRecords()
   const now     = new Date()
 
-  const periodStart = period === 'week' ? getWeekStart(now) : getMonthStart(now)
-  const prevStart =
-    period === 'week'
-      ? new Date(periodStart.getTime() - 7 * 86_400_000)
-      : new Date(now.getFullYear(), now.getMonth() - 1, 1)
-
-  const periodRecs = filterByRange(records, periodStart, now)
-  const prevRecs   = filterByRange(records, prevStart, periodStart)
-
+  // サマリーは常に今週固定
+  const weekStart     = getWeekStart(now)
+  const prevWeekStart = new Date(weekStart.getTime() - 7 * 86_400_000)
+  const weekRecs      = filterByRange(records, weekStart, now)
+  const prevWeekRecs  = filterByRange(records, prevWeekStart, weekStart)
   const streak        = calcStreak(records)
   const monthSessions = countThisMonthSessions(records)
   const volComp       = compareVolume(records)
-  const periodComp    = comparePeriod(records, period)
+  const weekComp      = comparePeriod(records, 'week')
 
   const TABS: { id: DashTab; label: string }[] = [
     { id: 'summary',  label: 'サマリー' },
@@ -76,7 +73,7 @@ export default function Dashboard({ onBack }: Props) {
               transition-colors -ml-1 px-1 py-1 rounded-lg
               focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500"
           >
-            ← ホームへ
+            ← お任せへ
           </button>
           <h1 className="text-base font-bold text-slate-900">統計・ダッシュボード</h1>
           <button
@@ -114,17 +111,17 @@ export default function Dashboard({ onBack }: Props) {
       {/* ── コンテンツ ── */}
       <div className="flex-1 px-4 py-4 pb-10 space-y-4">
 
-        {/* 期間切替（サマリー・推移タブ共通） */}
-        {tab !== 'calendar' && (
+        {/* 期間切替: 推移・PR タブのみ表示 */}
+        {tab === 'progress' && (
           <div className="flex bg-sky-100 rounded-xl p-1 gap-1">
             {(['week', 'month'] as const).map(p => (
               <button
                 key={p}
                 type="button"
-                onClick={() => setPeriod(p)}
+                onClick={() => setProgressPeriod(p)}
                 className={`flex-1 h-8 rounded-lg text-xs font-semibold transition-all
                   focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500
-                  ${period === p
+                  ${progressPeriod === p
                     ? 'bg-white text-sky-700 shadow-sm'
                     : 'text-slate-500 hover:text-slate-700'
                   }`}
@@ -137,19 +134,18 @@ export default function Dashboard({ onBack }: Props) {
 
         {tab === 'summary' && (
           <SummaryTab
-            periodRecs={periodRecs}
-            prevRecs={prevRecs}
-            period={period}
+            weekRecs={weekRecs}
+            prevWeekRecs={prevWeekRecs}
             streak={streak}
             monthSessions={monthSessions}
             volComp={volComp}
-            periodComp={periodComp}
+            weekComp={weekComp}
             allRecords={records}
           />
         )}
 
         {tab === 'progress' && (
-          <ProgressTab allRecords={records} period={period} />
+          <ProgressTab allRecords={records} period={progressPeriod} />
         )}
 
         {tab === 'calendar' && (
@@ -166,23 +162,22 @@ export default function Dashboard({ onBack }: Props) {
 // ────────────────────────────────────────────────────────────────────────────
 
 interface SummaryTabProps {
-  periodRecs:   ReturnType<typeof filterByRange>
-  prevRecs:     ReturnType<typeof filterByRange>
-  period:       Period
-  streak:       number
+  weekRecs:      WorkoutRecord[]
+  prevWeekRecs:  WorkoutRecord[]
+  streak:        number
   monthSessions: number
-  volComp:      VolumeComparison
-  periodComp:   PeriodComparison
-  allRecords:   ReturnType<typeof getAllRecords>
+  volComp:       VolumeComparison
+  weekComp:      PeriodComparison
+  allRecords:    WorkoutRecord[]
 }
 
 function SummaryTab({
-  periodRecs, prevRecs, period, streak, monthSessions,
-  volComp, periodComp, allRecords,
+  weekRecs, prevWeekRecs, streak, monthSessions,
+  volComp, weekComp, allRecords,
 }: SummaryTabProps) {
-  const days    = countUniqueDays(periodRecs)
-  const sets    = countTotalSets(periodRecs)
-  const bodyMap = countByBodyPart(periodRecs)
+  const days    = countUniqueDays(weekRecs)
+  const sets    = countTotalSets(weekRecs)
+  const bodyMap = countByBodyPart(weekRecs)
 
   const pctLabel = (comp: PeriodComparison) => {
     if (comp.pct === null) return '—'
@@ -197,29 +192,32 @@ function SummaryTab({
 
   return (
     <>
-      {/* 4枚の指標カード */}
+      {/* 今日のステータス（最優先） */}
+      <TodayStatus allRecords={allRecords} />
+
+      {/* 3つのキー指標（ストリーク優先） */}
       <div className="grid grid-cols-2 gap-3">
-        <StatCard
-          label="トレ日数"
-          value={String(days)}
-          unit="日"
-          sub={`前${period === 'week' ? '週' : '月'} ${countUniqueDays(prevRecs)} 日`}
-        />
-        <StatCard
-          label="セット数"
-          value={String(sets)}
-          unit="セット"
-          sub={
-            <span className={pctColor(periodComp)}>
-              {pctLabel(periodComp)}
-            </span>
-          }
-        />
         <StatCard
           label="🔥 ストリーク"
           value={String(streak)}
           unit="日連続"
           highlight
+        />
+        <StatCard
+          label="今週の実施日数"
+          value={String(days)}
+          unit="日"
+          sub={`先週 ${countUniqueDays(prevWeekRecs)} 日`}
+        />
+        <StatCard
+          label="今週のセット数"
+          value={String(sets)}
+          unit="セット"
+          sub={
+            <span className={pctColor(weekComp)}>
+              {pctLabel(weekComp)}
+            </span>
+          }
         />
         <StatCard
           label="今月の回数"
@@ -228,10 +226,10 @@ function SummaryTab({
         />
       </div>
 
-      {/* 部位別回数 */}
-      <SectionCard title="部位別セッション数">
+      {/* 部位別回数（今週） */}
+      <SectionCard title="今週の部位別セッション数">
         {bodyMap.size === 0 ? (
-          <EmptyInCard text={`${period === 'week' ? '今週' : '今月'}の記録がありません`} />
+          <EmptyInCard text="今週の記録がありません" />
         ) : (
           <BodyPartBars bodyMap={bodyMap} />
         )}
@@ -847,6 +845,52 @@ function GoalProgressBar({ label, current, target }: { label: string; current: n
           className={`h-full rounded-full transition-all duration-500 ${done ? 'bg-emerald-400' : 'bg-sky-400'}`}
           style={{ width: `${pct * 100}%` }}
         />
+      </div>
+    </div>
+  )
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+// 今日のステータスカード
+// ────────────────────────────────────────────────────────────────────────────
+
+function TodayStatus({ allRecords }: { allRecords: WorkoutRecord[] }) {
+  const today = new Date()
+  const todayStr = `${today.getFullYear()}/${today.getMonth()}/${today.getDate()}`
+
+  const todayRecs = allRecords.filter(r => {
+    const d = new Date(r.date)
+    return `${d.getFullYear()}/${d.getMonth()}/${d.getDate()}` === todayStr
+  })
+
+  const trainedToday = todayRecs.length > 0
+  const quickToday   = todayRecs.some(r => r.source === 'quick')
+
+  if (!trainedToday) {
+    return (
+      <div className="bg-white border border-sky-100 rounded-2xl shadow-sm p-4 flex items-center gap-3">
+        <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center text-xl shrink-0">
+          😴
+        </div>
+        <div>
+          <p className="text-sm font-bold text-slate-900">今日はまだトレーニングしていません</p>
+          <p className="text-xs text-slate-400 mt-0.5">お任せコースで今日の分を始めましょう</p>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="bg-sky-500 text-white rounded-2xl shadow-sm p-4 flex items-center gap-3">
+      <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center text-xl shrink-0">
+        ✅
+      </div>
+      <div>
+        <p className="text-sm font-bold">今日のトレーニング完了！</p>
+        <p className="text-xs text-sky-100 mt-0.5">
+          {quickToday ? 'お任せコースで実施済み' : '手動で実施済み'}
+          {todayRecs.length > 1 && `（${todayRecs.length} 種目）`}
+        </p>
       </div>
     </div>
   )

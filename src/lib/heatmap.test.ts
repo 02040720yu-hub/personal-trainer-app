@@ -4,6 +4,7 @@ import {
   toDateKey,
   getVolumeLevel,
   aggregateVolumeByDay,
+  aggregateQuickDaySet,
   buildMonthlyHeatmap,
   calcHeatmapStats,
 } from './heatmap'
@@ -14,8 +15,9 @@ function makeRecord(
   exerciseId: string,
   date: string,
   sets: Array<{ weight: number; reps: number }>,
+  source?: 'quick' | 'manual',
 ): WorkoutRecord {
-  return { id: `${exerciseId}-${date}`, exerciseId, date, sets, best1RM: 0, nextTargetWeight: 0 }
+  return { id: `${exerciseId}-${date}`, exerciseId, date, sets, best1RM: 0, nextTargetWeight: 0, source }
 }
 
 // ── toDateKey ─────────────────────────────────────────────────────────────────
@@ -76,6 +78,36 @@ describe('aggregateVolumeByDay', () => {
   })
 })
 
+// ── aggregateQuickDaySet ──────────────────────────────────────────────────────
+
+describe('aggregateQuickDaySet', () => {
+  it('空レコードは空 Set', () => {
+    expect(aggregateQuickDaySet([])).toHaveProperty('size', 0)
+  })
+
+  it('source=quick のレコードの日付のみを含む', () => {
+    const records: WorkoutRecord[] = [
+      makeRecord('bench', '2024-04-01T10:00:00.000Z', [{ weight: 100, reps: 10 }], 'quick'),
+      makeRecord('squat', '2024-04-02T10:00:00.000Z', [{ weight: 80, reps: 10 }], 'manual'),
+      makeRecord('curl',  '2024-04-03T10:00:00.000Z', [{ weight: 20, reps: 12 }]),
+    ]
+    const set = aggregateQuickDaySet(records)
+    expect(set.size).toBe(1)
+    expect(set.has('2024-04-01')).toBe(true)
+    expect(set.has('2024-04-02')).toBe(false)
+    expect(set.has('2024-04-03')).toBe(false)
+  })
+
+  it('同日に複数 quick レコードがあっても 1 エントリ', () => {
+    const records: WorkoutRecord[] = [
+      makeRecord('bench', '2024-04-01T09:00:00.000Z', [{ weight: 100, reps: 10 }], 'quick'),
+      makeRecord('squat', '2024-04-01T10:00:00.000Z', [{ weight: 80, reps: 10 }], 'quick'),
+    ]
+    const set = aggregateQuickDaySet(records)
+    expect(set.size).toBe(1)
+  })
+})
+
 // ── buildMonthlyHeatmap ──────────────────────────────────────────────────────
 
 describe('buildMonthlyHeatmap', () => {
@@ -84,14 +116,48 @@ describe('buildMonthlyHeatmap', () => {
     expect(buildMonthlyHeatmap([], 6)).toHaveLength(6)
   })
 
-  it('空レコードなら全日 level = 0, volume = 0', () => {
+  it('空レコードなら全日 level = 0, volume = 0, hasQuick = false', () => {
     const result = buildMonthlyHeatmap([], 2)
     for (const m of result) {
       for (const d of m.days) {
         expect(d.level).toBe(0)
         expect(d.volume).toBe(0)
+        expect(d.hasQuick).toBe(false)
       }
     }
+  })
+
+  it('quick レコードの当日が hasQuick = true になる', () => {
+    const today = new Date()
+    const records: WorkoutRecord[] = [
+      makeRecord('bench', today.toISOString(), [{ weight: 60, reps: 10 }], 'quick'),
+    ]
+    const result = buildMonthlyHeatmap(records, 1)
+    const lastMonth = result[result.length - 1]
+    const todayEntry = lastMonth.days.find(d => d.date.getDate() === today.getDate())
+    expect(todayEntry?.hasQuick).toBe(true)
+  })
+
+  it('manual レコードの当日は hasQuick = false のまま', () => {
+    const today = new Date()
+    const records: WorkoutRecord[] = [
+      makeRecord('bench', today.toISOString(), [{ weight: 60, reps: 10 }], 'manual'),
+    ]
+    const result = buildMonthlyHeatmap(records, 1)
+    const lastMonth = result[result.length - 1]
+    const todayEntry = lastMonth.days.find(d => d.date.getDate() === today.getDate())
+    expect(todayEntry?.hasQuick).toBe(false)
+  })
+
+  it('source 未設定レコード（旧データ）は hasQuick = false', () => {
+    const today = new Date()
+    const records: WorkoutRecord[] = [
+      makeRecord('bench', today.toISOString(), [{ weight: 60, reps: 10 }]),
+    ]
+    const result = buildMonthlyHeatmap(records, 1)
+    const lastMonth = result[result.length - 1]
+    const todayEntry = lastMonth.days.find(d => d.date.getDate() === today.getDate())
+    expect(todayEntry?.hasQuick).toBe(false)
   })
 
   it('各月の days 数が正しい（その月の日数と一致）', () => {

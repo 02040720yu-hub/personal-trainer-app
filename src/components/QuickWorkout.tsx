@@ -16,6 +16,7 @@ import { getProfile, getAllRecords, saveRecord } from '../lib/storage'
 import {
   buildQuickWorkoutPlan,
   calcCapacity,
+  type CourseType,
   type Focus,
   type PlannedExercise,
   type QuickWorkoutPlan,
@@ -51,6 +52,14 @@ const BODY_PART_LABELS: Record<BodyPart, string> = {
   biceps: '二頭筋', triceps: '三頭筋', core: 'コア',
 }
 
+type ToningPreset = 'full' | 'lower' | 'arms' | 'custom'
+
+const TONING_PRESET_OPTIONS: { value: Exclude<ToningPreset, 'custom'>; label: string; emoji: string; desc: string; bodyParts: BodyPart[] }[] = [
+  { value: 'full',  label: '全身引き締め', emoji: '✨', desc: '脚・三頭筋・肩・コア', bodyParts: ['legs', 'triceps', 'shoulders', 'core'] },
+  { value: 'lower', label: '下半身・お尻', emoji: '🍑', desc: '脚・コア', bodyParts: ['legs', 'core'] },
+  { value: 'arms',  label: '二の腕・肩',  emoji: '🦾', desc: '三頭筋・肩・コア', bodyParts: ['triceps', 'shoulders', 'core'] },
+]
+
 // ─────────────────────────────────────────────────────────────────────────────
 // 型定義
 // ─────────────────────────────────────────────────────────────────────────────
@@ -68,16 +77,21 @@ interface RecordedExercise {
 // ─────────────────────────────────────────────────────────────────────────────
 
 interface Props {
-  onBack: () => void
+  onOpenDashboard: () => void
+  onOpenHeatmap: () => void
+  onOpenSettings: () => void
+  onOpenTitle: () => void
 }
 
 type Step = 'select' | 'plan' | 'record' | 'summary'
 
-export default function QuickWorkout({ onBack }: Props) {
+export default function QuickWorkout({ onOpenDashboard, onOpenHeatmap, onOpenSettings, onOpenTitle }: Props) {
   const [step, setStep] = useState<Step>('select')
   const [minutes, setMinutes] = useState<Minutes>(45)
   const [focus, setFocus] = useState<Focus>('full')
   const [customBodyParts, setCustomBodyParts] = useState<BodyPart[]>([])
+  const [courseType, setCourseType] = useState<CourseType>('hypertrophy')
+  const [toningPreset, setToningPreset] = useState<ToningPreset>('full')
   const [plan, setPlan] = useState<QuickWorkoutPlan | null>(null)
   const [currentIndex, setCurrentIndex] = useState(0)
   const [recorded, setRecorded] = useState<RecordedExercise[]>([])
@@ -86,18 +100,35 @@ export default function QuickWorkout({ onBack }: Props) {
     setFocus(f)
   }, [])
 
-  const canGenerate = focus !== 'custom' || customBodyParts.length > 0
+  const canGenerate = courseType === 'toning'
+    ? (toningPreset !== 'custom' || customBodyParts.length > 0)
+    : (focus !== 'custom' || customBodyParts.length > 0)
 
   const handleGenerate = useCallback(() => {
     const profile = getProfile()
     if (!profile) return
     if (!canGenerate) return
 
+    let activeFocus: Focus
+    let activeBodyParts: BodyPart[] | undefined
+    if (courseType === 'toning') {
+      activeFocus = 'custom'
+      if (toningPreset === 'custom') {
+        activeBodyParts = customBodyParts
+      } else {
+        activeBodyParts = TONING_PRESET_OPTIONS.find(p => p.value === toningPreset)?.bodyParts
+      }
+    } else {
+      activeFocus = focus
+      activeBodyParts = focus === 'custom' ? customBodyParts : undefined
+    }
+
     const records = getAllRecords()
     const generated = buildQuickWorkoutPlan({
       minutes,
-      focus,
-      customBodyParts: focus === 'custom' ? customBodyParts : undefined,
+      focus: activeFocus,
+      customBodyParts: activeBodyParts,
+      courseType,
       profile,
       records,
       exercises: EXERCISES,
@@ -106,7 +137,7 @@ export default function QuickWorkout({ onBack }: Props) {
     setCurrentIndex(0)
     setRecorded([])
     setStep('plan')
-  }, [minutes, focus, customBodyParts, canGenerate])
+  }, [minutes, focus, customBodyParts, courseType, toningPreset, canGenerate])
 
   const handleStartRecord = useCallback(() => {
     setStep('record')
@@ -121,25 +152,65 @@ export default function QuickWorkout({ onBack }: Props) {
     }
   }, [plan, currentIndex])
 
+  /** サマリーから「もう一度」でハブ（select）に戻る */
+  const handleRestart = useCallback(() => {
+    setPlan(null)
+    setRecorded([])
+    setCurrentIndex(0)
+    setStep('select')
+  }, [])
+
   return (
     <div className="flex flex-col min-h-screen bg-sky-50">
 
-      {/* ヘッダー */}
+      {/* ヘッダー — ステップに応じてアクションを切替 */}
       <div className="sticky top-0 z-10 px-4 pt-safe pb-3 bg-white/95 backdrop-blur-sm border-b border-sky-100">
         <div className="flex items-center gap-3">
-          <button
-            type="button"
-            onClick={onBack}
-            className="text-sky-600 hover:text-sky-700 p-1 -ml-1 rounded-lg
-              active:scale-95 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500"
-            aria-label="戻る"
-          >
-            <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-              <path d="M12 15L7 10L12 5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-            </svg>
-          </button>
-          <div>
-            <h1 className="text-lg font-bold tracking-tight text-slate-900">お任せコース</h1>
+
+          {/* select: 設定アイコン */}
+          {step === 'select' && (
+            <button
+              type="button"
+              onClick={onOpenSettings}
+              className="text-slate-400 hover:text-slate-600 p-1 -ml-1 rounded-lg
+                active:scale-95 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500"
+              aria-label="設定"
+            >
+              <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                <circle cx="10" cy="10" r="2.5" stroke="currentColor" strokeWidth="1.8"/>
+                <path d="M10 2v2M10 16v2M2 10h2M16 10h2M4.22 4.22l1.42 1.42M14.36 14.36l1.42 1.42M4.22 15.78l1.42-1.42M14.36 5.64l1.42-1.42"
+                  stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/>
+              </svg>
+            </button>
+          )}
+
+          {/* plan: 戻るアイコン（select へ） */}
+          {step === 'plan' && (
+            <button
+              type="button"
+              onClick={() => setStep('select')}
+              className="text-sky-600 hover:text-sky-700 p-1 -ml-1 rounded-lg
+                active:scale-95 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500"
+              aria-label="部位選択に戻る"
+            >
+              <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                <path d="M12 15L7 10L12 5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+            </button>
+          )}
+
+          {/* record / summary: スペーサー（誤タップ防止） */}
+          {(step === 'record' || step === 'summary') && (
+            <div className="w-7 h-7" aria-hidden="true" />
+          )}
+
+          <div className="flex-1">
+            <h1 className="text-lg font-bold tracking-tight text-slate-900">
+              {step === 'summary'
+                ? (courseType === 'toning' ? '引き締め完了 🎉' : 'お任せ完了 🎉')
+                : (courseType === 'toning' ? '引き締めコース' : 'お任せコース')
+              }
+            </h1>
             {step === 'record' && plan && (
               <p className="text-xs text-slate-500">
                 {currentIndex + 1} / {plan.exercises.length} 種目
@@ -156,11 +227,18 @@ export default function QuickWorkout({ onBack }: Props) {
             minutes={minutes}
             focus={focus}
             customBodyParts={customBodyParts}
+            courseType={courseType}
+            toningPreset={toningPreset}
             canGenerate={canGenerate}
             onMinutesChange={setMinutes}
             onFocusChange={handleFocusChange}
             onCustomBodyPartsChange={setCustomBodyParts}
+            onCourseTypeChange={setCourseType}
+            onToningPresetChange={setToningPreset}
             onGenerate={handleGenerate}
+            onOpenDashboard={onOpenDashboard}
+            onOpenHeatmap={onOpenHeatmap}
+            onOpenTitle={onOpenTitle}
           />
         )}
         {step === 'plan' && plan && (
@@ -170,6 +248,7 @@ export default function QuickWorkout({ onBack }: Props) {
             onStart={handleStartRecord}
           />
         )}
+
         {step === 'record' && plan && (
           <RecordStep
             key={currentIndex}
@@ -183,7 +262,8 @@ export default function QuickWorkout({ onBack }: Props) {
           <SummaryStep
             plan={plan}
             recorded={recorded}
-            onBack={onBack}
+            onRestart={handleRestart}
+            onOpenDashboard={onOpenDashboard}
           />
         )}
       </div>
@@ -196,20 +276,30 @@ export default function QuickWorkout({ onBack }: Props) {
 // ─────────────────────────────────────────────────────────────────────────────
 
 function SelectStep({
-  minutes, focus, customBodyParts, canGenerate,
-  onMinutesChange, onFocusChange, onCustomBodyPartsChange, onGenerate,
+  minutes, focus, customBodyParts, courseType, toningPreset, canGenerate,
+  onMinutesChange, onFocusChange, onCustomBodyPartsChange,
+  onCourseTypeChange, onToningPresetChange, onGenerate,
+  onOpenDashboard, onOpenHeatmap, onOpenTitle,
 }: {
   minutes: Minutes
   focus: Focus
   customBodyParts: BodyPart[]
+  courseType: CourseType
+  toningPreset: ToningPreset
   canGenerate: boolean
   onMinutesChange: (m: Minutes) => void
   onFocusChange: (f: Focus) => void
   onCustomBodyPartsChange: (parts: BodyPart[]) => void
+  onCourseTypeChange: (c: CourseType) => void
+  onToningPresetChange: (p: ToningPreset) => void
   onGenerate: () => void
+  onOpenDashboard: () => void
+  onOpenHeatmap: () => void
+  onOpenTitle: () => void
 }) {
   const { exerciseCount, totalSets } = calcCapacity(minutes)
   const isCustom = focus === 'custom'
+  const isToning = courseType === 'toning'
 
   const toggleBodyPart = (bp: BodyPart) => {
     if (customBodyParts.includes(bp)) {
@@ -219,14 +309,51 @@ function SelectStep({
     }
   }
 
+  const accentActive   = isToning ? 'bg-rose-500 text-white shadow-md shadow-rose-500/25' : 'bg-sky-500 text-white shadow-md shadow-sky-500/25'
+  const accentRing     = isToning ? 'focus-visible:ring-rose-500' : 'focus-visible:ring-sky-500'
+  const generateBtnOn  = isToning
+    ? 'bg-rose-500 text-white shadow-lg shadow-rose-500/25 active:scale-[0.98] hover:bg-rose-600'
+    : 'bg-sky-500 text-white shadow-lg shadow-sky-500/25 active:scale-[0.98] hover:bg-sky-600'
+
   return (
     <div className="px-4 py-5 space-y-6">
 
-      {/* 導入テキスト */}
-      <div className="bg-gradient-to-r from-sky-500 to-sky-400 text-white rounded-2xl px-4 py-3.5">
-        <p className="text-sm font-bold">部位を選ぶだけでスタートできます</p>
-        <p className="text-xs text-sky-100 mt-0.5">種目は自動で決まります。手動選択は不要です。</p>
+      {/* コース切り替えタブ */}
+      <div className="flex bg-slate-100 rounded-2xl p-1 gap-1">
+        <button
+          type="button"
+          onClick={() => onCourseTypeChange('hypertrophy')}
+          aria-pressed={!isToning}
+          className={`flex-1 rounded-xl py-2.5 text-sm font-bold transition-all
+            focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500
+            ${!isToning ? 'bg-sky-500 text-white shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+        >
+          💪 筋肥大
+        </button>
+        <button
+          type="button"
+          onClick={() => onCourseTypeChange('toning')}
+          aria-pressed={isToning}
+          className={`flex-1 rounded-xl py-2.5 text-sm font-bold transition-all
+            focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-500
+            ${isToning ? 'bg-rose-500 text-white shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+        >
+          ✨ 引き締め
+        </button>
       </div>
+
+      {/* 導入テキスト */}
+      {isToning ? (
+        <div className="bg-gradient-to-r from-rose-500 to-pink-400 text-white rounded-2xl px-4 py-3.5">
+          <p className="text-sm font-bold">女性向け引き締めコース</p>
+          <p className="text-xs text-rose-100 mt-0.5">15回高回数・軽負荷で脂肪燃焼＆引き締めを目指します</p>
+        </div>
+      ) : (
+        <div className="bg-gradient-to-r from-sky-500 to-sky-400 text-white rounded-2xl px-4 py-3.5">
+          <p className="text-sm font-bold">部位を選ぶだけでスタートできます</p>
+          <p className="text-xs text-sky-100 mt-0.5">種目は自動で決まります。手動選択は不要です。</p>
+        </div>
+      )}
 
       {/* 時間選択 */}
       <section>
@@ -239,9 +366,9 @@ function SelectStep({
               onClick={() => onMinutesChange(m)}
               aria-pressed={minutes === m}
               className={`rounded-xl py-3 text-sm font-bold transition-all active:scale-95
-                focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500
+                focus-visible:outline-none focus-visible:ring-2 ${accentRing}
                 ${minutes === m
-                  ? 'bg-sky-500 text-white shadow-md shadow-sky-500/25'
+                  ? accentActive
                   : 'bg-white border border-sky-200 text-slate-700 hover:border-sky-300'
                 }`}
             >
@@ -251,124 +378,250 @@ function SelectStep({
         </div>
       </section>
 
-      {/* フォーカス選択 */}
-      <section>
-        <p className="label-xs mb-3">トレーニング部位</p>
+      {/* 引き締め: プリセット選択 */}
+      {isToning && (
+        <section>
+          <p className="label-xs mb-3">コースを選ぶ</p>
 
-        {/* タブ: プリセット / カスタム */}
-        <div className="flex bg-slate-100 rounded-xl p-1 mb-3 gap-1">
-          <button
-            type="button"
-            onClick={() => {
-              if (isCustom) onFocusChange('full')
-            }}
-            aria-pressed={!isCustom}
-            className={`flex-1 rounded-lg py-2 text-sm font-semibold transition-all
-              focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500
-              ${!isCustom
-                ? 'bg-white text-sky-600 shadow-sm'
-                : 'text-slate-500 hover:text-slate-700'
-              }`}
-          >
-            プリセット
-          </button>
-          <button
-            type="button"
-            onClick={() => onFocusChange('custom')}
-            aria-pressed={isCustom}
-            className={`flex-1 rounded-lg py-2 text-sm font-semibold transition-all
-              focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500
-              ${isCustom
-                ? 'bg-white text-sky-600 shadow-sm'
-                : 'text-slate-500 hover:text-slate-700'
-              }`}
-          >
-            部位を指定
-          </button>
-        </div>
-
-        {/* プリセット選択肢 */}
-        {!isCustom && (
-          <div className="space-y-2">
-            {FOCUS_OPTIONS.map(opt => (
-              <button
-                key={opt.value}
-                type="button"
-                onClick={() => onFocusChange(opt.value)}
-                aria-pressed={focus === opt.value}
-                className={`w-full flex items-center gap-3 rounded-2xl p-4 transition-all active:scale-[0.98]
-                  focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500
-                  ${focus === opt.value
-                    ? 'bg-sky-500 text-white shadow-md shadow-sky-500/25'
-                    : 'bg-white border border-sky-200 text-slate-700 hover:border-sky-300 hover:shadow-sm'
-                  }`}
-              >
-                <span className="text-xl" aria-hidden="true">{opt.emoji}</span>
-                <div className="text-left">
-                  <p className="text-sm font-bold">{opt.label}</p>
-                  <p className={`text-xs mt-0.5 ${focus === opt.value ? 'text-sky-100' : 'text-slate-500'}`}>
-                    {opt.desc}
-                  </p>
-                </div>
-                {focus === opt.value && (
-                  <svg className="ml-auto" width="18" height="18" viewBox="0 0 18 18" fill="none">
-                    <path d="M4 9L7.5 12.5L14 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                  </svg>
-                )}
-              </button>
-            ))}
+          {/* プリセット / カスタムタブ */}
+          <div className="flex bg-slate-100 rounded-xl p-1 mb-3 gap-1">
+            <button
+              type="button"
+              onClick={() => { if (toningPreset === 'custom') onToningPresetChange('full') }}
+              aria-pressed={toningPreset !== 'custom'}
+              className={`flex-1 rounded-lg py-2 text-sm font-semibold transition-all
+                focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-500
+                ${toningPreset !== 'custom' ? 'bg-white text-rose-500 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+            >
+              プリセット
+            </button>
+            <button
+              type="button"
+              onClick={() => onToningPresetChange('custom')}
+              aria-pressed={toningPreset === 'custom'}
+              className={`flex-1 rounded-lg py-2 text-sm font-semibold transition-all
+                focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-500
+                ${toningPreset === 'custom' ? 'bg-white text-rose-500 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+            >
+              部位を指定
+            </button>
           </div>
-        )}
 
-        {/* カスタム部位グリッド */}
-        {isCustom && (
-          <div>
-            <div className="grid grid-cols-4 gap-2">
-              {BODY_PART_OPTIONS.map(opt => {
-                const selected = customBodyParts.includes(opt.value)
+          {/* 引き締めプリセット */}
+          {toningPreset !== 'custom' && (
+            <div className="space-y-2">
+              {TONING_PRESET_OPTIONS.map(opt => {
+                const isSelected = toningPreset === opt.value
                 return (
                   <button
                     key={opt.value}
                     type="button"
-                    onClick={() => toggleBodyPart(opt.value)}
-                    aria-pressed={selected}
-                    className={`flex flex-col items-center gap-1 rounded-2xl py-3 px-2 text-center
-                      transition-all active:scale-95
-                      focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500
-                      ${selected
-                        ? 'bg-sky-500 text-white shadow-md shadow-sky-500/25'
-                        : 'bg-white border border-sky-200 text-slate-600 hover:border-sky-300'
+                    onClick={() => onToningPresetChange(opt.value)}
+                    aria-pressed={isSelected}
+                    className={`w-full flex items-center gap-3 rounded-2xl p-4 transition-all active:scale-[0.98]
+                      focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-500
+                      ${isSelected
+                        ? 'bg-rose-500 text-white shadow-md shadow-rose-500/25'
+                        : 'bg-white border border-rose-100 text-slate-700 hover:border-rose-200 hover:shadow-sm'
                       }`}
                   >
-                    <span className="text-lg" aria-hidden="true">{opt.emoji}</span>
-                    <span className="text-[11px] font-semibold leading-tight">{opt.label}</span>
+                    <span className="text-xl" aria-hidden="true">{opt.emoji}</span>
+                    <div className="text-left">
+                      <p className="text-sm font-bold">{opt.label}</p>
+                      <p className={`text-xs mt-0.5 ${isSelected ? 'text-rose-100' : 'text-slate-500'}`}>
+                        {opt.desc}
+                      </p>
+                    </div>
+                    {isSelected && (
+                      <svg className="ml-auto" width="18" height="18" viewBox="0 0 18 18" fill="none">
+                        <path d="M4 9L7.5 12.5L14 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                      </svg>
+                    )}
                   </button>
                 )
               })}
             </div>
-            {customBodyParts.length === 0 && (
-              <p className="text-xs text-rose-500 mt-2.5 text-center font-medium">
-                部位を1つ以上選んでください
-              </p>
-            )}
-            {customBodyParts.length > 0 && (
-              <p className="text-xs text-sky-600 mt-2.5 text-center font-medium">
-                {customBodyParts.map(bp => BODY_PART_LABELS[bp]).join('・')} を選択中
-              </p>
-            )}
+          )}
+
+          {/* 引き締めカスタム部位 */}
+          {toningPreset === 'custom' && (
+            <div>
+              <div className="grid grid-cols-4 gap-2">
+                {BODY_PART_OPTIONS.map(opt => {
+                  const selected = customBodyParts.includes(opt.value)
+                  return (
+                    <button
+                      key={opt.value}
+                      type="button"
+                      onClick={() => toggleBodyPart(opt.value)}
+                      aria-pressed={selected}
+                      className={`flex flex-col items-center gap-1 rounded-2xl py-3 px-2 text-center
+                        transition-all active:scale-95
+                        focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-500
+                        ${selected
+                          ? 'bg-rose-500 text-white shadow-md shadow-rose-500/25'
+                          : 'bg-white border border-rose-100 text-slate-600 hover:border-rose-200'
+                        }`}
+                    >
+                      <span className="text-lg" aria-hidden="true">{opt.emoji}</span>
+                      <span className="text-[11px] font-semibold leading-tight">{opt.label}</span>
+                    </button>
+                  )
+                })}
+              </div>
+              {customBodyParts.length === 0 && (
+                <p className="text-xs text-rose-500 mt-2.5 text-center font-medium">部位を1つ以上選んでください</p>
+              )}
+              {customBodyParts.length > 0 && (
+                <p className="text-xs text-rose-400 mt-2.5 text-center font-medium">
+                  {customBodyParts.map(bp => BODY_PART_LABELS[bp]).join('・')} を選択中
+                </p>
+              )}
+            </div>
+          )}
+        </section>
+      )}
+
+      {/* 筋肥大: フォーカス選択（従来） */}
+      {!isToning && (
+        <section>
+          <p className="label-xs mb-3">トレーニング部位</p>
+
+          {/* タブ: プリセット / カスタム */}
+          <div className="flex bg-slate-100 rounded-xl p-1 mb-3 gap-1">
+            <button
+              type="button"
+              onClick={() => { if (isCustom) onFocusChange('full') }}
+              aria-pressed={!isCustom}
+              className={`flex-1 rounded-lg py-2 text-sm font-semibold transition-all
+                focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500
+                ${!isCustom ? 'bg-white text-sky-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+            >
+              プリセット
+            </button>
+            <button
+              type="button"
+              onClick={() => onFocusChange('custom')}
+              aria-pressed={isCustom}
+              className={`flex-1 rounded-lg py-2 text-sm font-semibold transition-all
+                focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500
+                ${isCustom ? 'bg-white text-sky-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+            >
+              部位を指定
+            </button>
           </div>
-        )}
+
+          {/* プリセット選択肢 */}
+          {!isCustom && (
+            <div className="space-y-2">
+              {FOCUS_OPTIONS.map(opt => (
+                <button
+                  key={opt.value}
+                  type="button"
+                  onClick={() => onFocusChange(opt.value)}
+                  aria-pressed={focus === opt.value}
+                  className={`w-full flex items-center gap-3 rounded-2xl p-4 transition-all active:scale-[0.98]
+                    focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500
+                    ${focus === opt.value
+                      ? 'bg-sky-500 text-white shadow-md shadow-sky-500/25'
+                      : 'bg-white border border-sky-200 text-slate-700 hover:border-sky-300 hover:shadow-sm'
+                    }`}
+                >
+                  <span className="text-xl" aria-hidden="true">{opt.emoji}</span>
+                  <div className="text-left">
+                    <p className="text-sm font-bold">{opt.label}</p>
+                    <p className={`text-xs mt-0.5 ${focus === opt.value ? 'text-sky-100' : 'text-slate-500'}`}>
+                      {opt.desc}
+                    </p>
+                  </div>
+                  {focus === opt.value && (
+                    <svg className="ml-auto" width="18" height="18" viewBox="0 0 18 18" fill="none">
+                      <path d="M4 9L7.5 12.5L14 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                    </svg>
+                  )}
+                </button>
+              ))}
+            </div>
+          )}
+
+          {/* カスタム部位グリッド */}
+          {isCustom && (
+            <div>
+              <div className="grid grid-cols-4 gap-2">
+                {BODY_PART_OPTIONS.map(opt => {
+                  const selected = customBodyParts.includes(opt.value)
+                  return (
+                    <button
+                      key={opt.value}
+                      type="button"
+                      onClick={() => toggleBodyPart(opt.value)}
+                      aria-pressed={selected}
+                      className={`flex flex-col items-center gap-1 rounded-2xl py-3 px-2 text-center
+                        transition-all active:scale-95
+                        focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500
+                        ${selected
+                          ? 'bg-sky-500 text-white shadow-md shadow-sky-500/25'
+                          : 'bg-white border border-sky-200 text-slate-600 hover:border-sky-300'
+                        }`}
+                    >
+                      <span className="text-lg" aria-hidden="true">{opt.emoji}</span>
+                      <span className="text-[11px] font-semibold leading-tight">{opt.label}</span>
+                    </button>
+                  )
+                })}
+              </div>
+              {customBodyParts.length === 0 && (
+                <p className="text-xs text-rose-500 mt-2.5 text-center font-medium">
+                  部位を1つ以上選んでください
+                </p>
+              )}
+              {customBodyParts.length > 0 && (
+                <p className="text-xs text-sky-600 mt-2.5 text-center font-medium">
+                  {customBodyParts.map(bp => BODY_PART_LABELS[bp]).join('・')} を選択中
+                </p>
+              )}
+            </div>
+          )}
+        </section>
+      )}
+
+      {/* 記録を見る */}
+      <section>
+        <p className="label-xs mb-2">記録を見る</p>
+        <div className="flex gap-2">
+          <button
+            type="button"
+            onClick={onOpenDashboard}
+            className="flex-1 flex flex-col items-center gap-1.5 bg-white border border-sky-200
+              rounded-2xl py-3.5 px-2 text-slate-700 hover:border-sky-300 hover:shadow-sm
+              active:scale-95 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500"
+          >
+            <span className="text-xl" aria-hidden="true">📊</span>
+            <span className="text-xs font-semibold">ダッシュボード</span>
+          </button>
+          <button
+            type="button"
+            onClick={onOpenHeatmap}
+            className="flex-1 flex flex-col items-center gap-1.5 bg-white border border-sky-200
+              rounded-2xl py-3.5 px-2 text-slate-700 hover:border-sky-300 hover:shadow-sm
+              active:scale-95 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500"
+          >
+            <span className="text-xl" aria-hidden="true">📅</span>
+            <span className="text-xs font-semibold">活動カレンダー</span>
+          </button>
+        </div>
       </section>
 
       {/* プレビュー */}
       <div className="bg-white rounded-2xl border border-sky-100 shadow-sm px-4 py-3">
         <p className="text-xs text-slate-500">予定</p>
         <p className="text-slate-900 font-bold mt-1 tabular-nums">
-          <span className="text-2xl text-sky-600">{exerciseCount}</span>
+          <span className={`text-2xl ${isToning ? 'text-rose-500' : 'text-sky-600'}`}>{exerciseCount}</span>
           <span className="text-sm ml-1">種目</span>
           <span className="mx-2 text-slate-300">·</span>
-          <span className="text-2xl text-sky-600">{totalSets}</span>
+          <span className={`text-2xl ${isToning ? 'text-rose-500' : 'text-sky-600'}`}>{totalSets}</span>
           <span className="text-sm ml-1">セット</span>
+          {isToning && <span className="text-xs text-rose-400 ml-2 font-normal">15回×軽重量</span>}
         </p>
       </div>
 
@@ -378,14 +631,24 @@ function SelectStep({
         onClick={onGenerate}
         disabled={!canGenerate}
         className={`w-full h-14 rounded-2xl text-base font-bold transition-all
-          focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 focus-visible:ring-offset-2
-          ${canGenerate
-            ? 'bg-sky-500 text-white shadow-lg shadow-sky-500/25 active:scale-[0.98] hover:bg-sky-600'
-            : 'bg-slate-200 text-slate-400 cursor-not-allowed'
-          }`}
+          focus-visible:outline-none focus-visible:ring-2 ${accentRing} focus-visible:ring-offset-2
+          ${canGenerate ? generateBtnOn : 'bg-slate-200 text-slate-400 cursor-not-allowed'}`}
       >
-        プランを作成
+        {isToning ? 'プランを作成（引き締め）' : 'プランを作成'}
       </button>
+
+      {/* タイトルへ戻る */}
+      <div className="flex justify-center pb-2">
+        <button
+          type="button"
+          onClick={onOpenTitle}
+          className="text-xs text-slate-400 hover:text-slate-600 active:scale-95 transition-all
+            px-3 py-1.5 rounded-lg
+            focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500"
+        >
+          タイトルに戻る
+        </button>
+      </div>
     </div>
   )
 }
@@ -538,6 +801,7 @@ function RecordStep({
       sets: parsedSets,
       best1RM,
       nextTargetWeight,
+      source: 'quick',
     }
 
     const existingRecords = getAllRecords()
@@ -674,11 +938,12 @@ function RecordStep({
 // ─────────────────────────────────────────────────────────────────────────────
 
 function SummaryStep({
-  plan, recorded, onBack,
+  plan, recorded, onRestart, onOpenDashboard,
 }: {
   plan: QuickWorkoutPlan
   recorded: RecordedExercise[]
-  onBack: () => void
+  onRestart: () => void
+  onOpenDashboard: () => void
 }) {
   const completedCount = recorded.filter(r => r.sets.length > 0).length
   const skippedCount   = recorded.filter(r => r.sets.length === 0).length
@@ -736,16 +1001,27 @@ function SummaryStep({
         </p>
       )}
 
-      {/* ホームへ */}
-      <button
-        type="button"
-        onClick={onBack}
-        className="w-full h-14 bg-sky-500 text-white rounded-2xl text-base font-bold
-          shadow-lg shadow-sky-500/25 active:scale-[0.98] transition-all
-          hover:bg-sky-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 focus-visible:ring-offset-2"
-      >
-        ホームに戻る
-      </button>
+      {/* アクションボタン */}
+      <div className="flex gap-3 pt-1">
+        <button
+          type="button"
+          onClick={onRestart}
+          className="flex-1 h-14 bg-white border border-sky-200 text-slate-700 rounded-2xl font-semibold
+            active:scale-[0.98] transition-all hover:border-sky-300
+            focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500"
+        >
+          もう一度
+        </button>
+        <button
+          type="button"
+          onClick={onOpenDashboard}
+          className="flex-[2] h-14 bg-sky-500 text-white rounded-2xl text-base font-bold
+            shadow-lg shadow-sky-500/25 active:scale-[0.98] transition-all
+            hover:bg-sky-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 focus-visible:ring-offset-2"
+        >
+          📊 記録を確認する
+        </button>
+      </div>
     </div>
   )
 }

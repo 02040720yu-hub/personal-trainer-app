@@ -5,12 +5,14 @@
 
 import type { BodyPart, Exercise, UserProfile, WorkoutRecord } from '../types'
 import {
+  calculateInitial1RM,
   calculateInitialTargetWeight,
   calculateWeightForReps,
   roundToNearestPlate,
 } from './calculations'
 
 export type Focus = 'full' | 'upper' | 'lower' | 'custom'
+export type CourseType = 'hypertrophy' | 'toning'
 
 export interface PlannedExercise {
   exercise: Exercise
@@ -24,6 +26,7 @@ export interface PlannedExercise {
 export interface QuickWorkoutPlan {
   minutes: number
   focus: Focus
+  courseType: CourseType
   /** focus === 'custom' のとき選択された部位リスト */
   customBodyParts?: BodyPart[]
   exercises: PlannedExercise[]
@@ -105,12 +108,14 @@ export function buildQuickWorkoutPlan(params: {
   focus: Focus
   /** focus === 'custom' のときに使用する部位リスト */
   customBodyParts?: BodyPart[]
+  courseType?: CourseType
   profile: UserProfile
   records: WorkoutRecord[]
   exercises: Exercise[]
   seed?: number
 }): QuickWorkoutPlan {
   const { minutes, focus, customBodyParts, profile, records, exercises, seed } = params
+  const course: CourseType = params.courseType ?? 'hypertrophy'
   const rand = seededRandom(seed ?? Date.now())
 
   // 部位リストの決定
@@ -123,6 +128,7 @@ export function buildQuickWorkoutPlan(params: {
     return {
       minutes,
       focus,
+      courseType: course,
       customBodyParts: [],
       exercises: [],
       totalSets: 0,
@@ -168,7 +174,7 @@ export function buildQuickWorkoutPlan(params: {
   const baseSets = selected.length > 0 ? Math.floor(totalSets / selected.length) : 0
   const remainder = selected.length > 0 ? totalSets % selected.length : 0
 
-  const TARGET_REPS = 10
+  const TARGET_REPS = course === 'toning' ? 15 : 10
 
   const plannedExercises: PlannedExercise[] = selected.map((exercise, i) => {
     const targetSets = Math.max(1, baseSets + (i < remainder ? 1 : 0))
@@ -178,19 +184,24 @@ export function buildQuickWorkoutPlan(params: {
     let weightSource: 'record' | 'estimate'
 
     if (latestRecord) {
-      targetWeight = roundToNearestPlate(
-        latestRecord.nextTargetWeight > 0
+      const baseWeight = course === 'toning'
+        ? calculateWeightForReps(latestRecord.best1RM, 15)
+        : latestRecord.nextTargetWeight > 0
           ? latestRecord.nextTargetWeight
-          : calculateWeightForReps(latestRecord.best1RM, TARGET_REPS)
-      )
+          : calculateWeightForReps(latestRecord.best1RM, 10)
+      targetWeight = roundToNearestPlate(baseWeight)
       weightSource = 'record'
     } else {
-      targetWeight = calculateInitialTargetWeight(
-        exercise.id,
-        profile.weight,
-        profile.gender,
-        exercise.category,
-      )
+      if (course === 'toning') {
+        const initial1RM = calculateInitial1RM(
+          exercise.id, profile.weight, profile.gender, exercise.category,
+        )
+        targetWeight = roundToNearestPlate(calculateWeightForReps(initial1RM, 15))
+      } else {
+        targetWeight = calculateInitialTargetWeight(
+          exercise.id, profile.weight, profile.gender, exercise.category,
+        )
+      }
       weightSource = 'estimate'
     }
 
@@ -203,11 +214,14 @@ export function buildQuickWorkoutPlan(params: {
     }
   })
 
-  const restSecondsPerSet = exerciseCount <= 3 ? 120 : exerciseCount <= 5 ? 90 : 60
+  const restSecondsPerSet = course === 'toning'
+    ? (exerciseCount <= 3 ? 90 : exerciseCount <= 5 ? 60 : 45)
+    : (exerciseCount <= 3 ? 120 : exerciseCount <= 5 ? 90 : 60)
 
   return {
     minutes,
     focus,
+    courseType: course,
     customBodyParts: focus === 'custom' ? bodyPartOrder : undefined,
     exercises: plannedExercises,
     totalSets,
