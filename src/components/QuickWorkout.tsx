@@ -21,7 +21,7 @@ import {
   type PlannedExercise,
   type QuickWorkoutPlan,
 } from '../lib/quickWorkout'
-import { calculate10RMTarget, roundToNearestPlate, getBest1RM } from '../lib/calculations'
+import { calculate10RMTarget, roundToNearestPlate, getBest1RM, calcNextTarget } from '../lib/calculations'
 import { checkPR } from '../lib/analytics'
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -346,7 +346,7 @@ function SelectStep({
       {isToning ? (
         <div className="bg-gradient-to-r from-rose-500 to-pink-400 text-white rounded-2xl px-4 py-3.5">
           <p className="text-sm font-bold">女性向け引き締めコース</p>
-          <p className="text-xs text-rose-100 mt-0.5">15回高回数・軽負荷で脂肪燃焼＆引き締めを目指します</p>
+          <p className="text-xs text-rose-100 mt-0.5">1RMの80%・10回で脂肪燃焼＆引き締めを目指します</p>
         </div>
       ) : (
         <div className="bg-gradient-to-r from-cyan-600 to-cyan-500 text-white rounded-2xl px-4 py-3.5">
@@ -617,7 +617,7 @@ function SelectStep({
           <span className="mx-2 text-slate-700">·</span>
           <span className={`text-2xl ${isToning ? 'text-rose-400' : 'text-cyan-400'}`}>{totalSets}</span>
           <span className="text-sm ml-1">セット</span>
-          {isToning && <span className="text-xs text-rose-400/70 ml-2 font-normal">15回×軽重量</span>}
+          {isToning && <span className="text-xs text-rose-400/70 ml-2 font-normal">10回×1RM80%</span>}
         </p>
       </div>
 
@@ -743,7 +743,7 @@ function PlanExerciseCard({ planned, index }: { planned: PlannedExercise; index:
 // RecordStep
 // ─────────────────────────────────────────────────────────────────────────────
 
-interface SetInput { weight: string; reps: string }
+interface SetInput { weight: string; reps: string; isBodyweight: boolean }
 
 function RecordStep({
   planned, index, total, onSaved,
@@ -753,16 +753,25 @@ function RecordStep({
   total: number
   onSaved: (rec: RecordedExercise) => void
 }) {
+  const profile = getProfile()!
   const [sets, setSets] = useState<SetInput[]>(() =>
     Array.from({ length: planned.targetSets }, () => ({
-      weight: String(planned.targetWeight),
-      reps:   String(planned.targetReps),
+      weight: '',
+      reps: '',
+      isBodyweight: false,
     }))
   )
+  const [allBodyweight, setAllBodyweight] = useState(false)
   const [saving, setSaving] = useState(false)
 
+  const toggleAllBodyweight = () => {
+    const next = !allBodyweight
+    setAllBodyweight(next)
+    setSets(prev => prev.map(s => ({ ...s, isBodyweight: next, weight: '' })))
+  }
+
   const addSet = () =>
-    setSets(prev => [...prev, { weight: prev[prev.length - 1]?.weight ?? '0', reps: '10' }])
+    setSets(prev => [...prev, { weight: '', reps: '', isBodyweight: allBodyweight }])
 
   const removeSet = (i: number) =>
     setSets(prev => prev.length > 1 ? prev.filter((_, idx) => idx !== i) : prev)
@@ -774,10 +783,13 @@ function RecordStep({
     if (saving) return
     setSaving(true)
 
-    const parsedSets = sets.map(s => ({
-      weight: parseFloat(s.weight) || 0,
-      reps:   parseInt(s.reps, 10) || 0,
-    })).filter(s => s.weight > 0 && s.reps > 0)
+    const parsedSets = sets
+      .map(s => ({
+        weight: s.isBodyweight ? profile.weight : (parseFloat(s.weight) || 0),
+        reps: parseInt(s.reps, 10) || 0,
+        ...(s.isBodyweight ? { isBodyweight: true as const } : {}),
+      }))
+      .filter(s => (s.isBodyweight || s.weight > 0) && s.reps > 0)
 
     if (parsedSets.length === 0) {
       setSaving(false)
@@ -814,7 +826,7 @@ function RecordStep({
 
   return (
     <div className="px-4 py-5 space-y-4">
-      {/* 種目ヘッダー */}
+      {/* 種目ヘッダー + 目安 */}
       <div className="bg-slate-900 border border-white/10 rounded-2xl px-4 py-4">
         <div className="flex items-start justify-between">
           <div>
@@ -829,13 +841,41 @@ function RecordStep({
             {planned.exercise.category === 'compound' ? '複合' : '単関節'}
           </span>
         </div>
-        <div className="flex items-center gap-3 mt-3 text-sm text-slate-400 tabular-nums">
-          <span>目安: {planned.targetWeight}kg × {planned.targetReps}回</span>
-          {planned.weightSource === 'estimate' && (
-            <span className="text-amber-400 text-xs font-semibold">推定値</span>
-          )}
+
+        {/* 目安（大きく表示） */}
+        <div className="mt-4 pt-4 border-t border-white/10">
+          <p className="text-[10px] text-slate-500 uppercase tracking-wider font-semibold mb-1.5">
+            目安{planned.weightSource === 'estimate' ? '（初回推定）' : '（1RMの80%）'}
+          </p>
+          <div className="flex items-end gap-2">
+            <span className="text-4xl font-bold text-cyan-400 tabular-nums leading-none">
+              {planned.targetWeight}
+            </span>
+            <span className="text-slate-300 text-lg mb-0.5">kg × {planned.targetReps}回</span>
+            {planned.weightSource === 'estimate' && (
+              <span className="text-amber-400 text-xs font-semibold mb-1 ml-1">推定値</span>
+            )}
+          </div>
         </div>
       </div>
+
+      {/* 自重トグル（懸垂・ディップスのみ） */}
+      {planned.exercise.supportsBodyweightToggle && (
+        <button
+          type="button"
+          onClick={toggleAllBodyweight}
+          className={`w-full flex items-center justify-between rounded-xl px-4 py-3 transition-all
+            focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500
+            ${allBodyweight
+              ? 'bg-cyan-500/20 border border-cyan-500/40 text-cyan-300'
+              : 'bg-slate-900 border border-white/10 text-slate-400 hover:border-white/20'}`}
+        >
+          <span className="text-sm font-semibold">自重で記録する</span>
+          <span className="text-xs">
+            {allBodyweight ? `体重 ${profile.weight} kg で 1RM 計算` : 'タップで切り替え'}
+          </span>
+        </button>
+      )}
 
       {/* セット入力 */}
       <div className="space-y-2">
@@ -853,7 +893,9 @@ function RecordStep({
         {/* カラムヘッダー */}
         <div className="grid grid-cols-[2rem_1fr_1fr_2rem] gap-2 px-1 mb-1">
           <span className="text-[10px] text-slate-500 text-center">#</span>
-          <span className="text-[10px] text-slate-500 text-center">重量 (kg)</span>
+          <span className="text-[10px] text-slate-500 text-center">
+            {allBodyweight ? '重量' : '重量 (kg)'}
+          </span>
           <span className="text-[10px] text-slate-500 text-center">回数</span>
           <span />
         </div>
@@ -861,27 +903,37 @@ function RecordStep({
         {sets.map((s, i) => (
           <div key={i} className="grid grid-cols-[2rem_1fr_1fr_2rem] gap-2 items-center">
             <span className="text-xs text-slate-500 text-center tabular-nums font-semibold">{i + 1}</span>
-            <input
-              type="number"
-              value={s.weight}
-              min="0"
-              step="2.5"
-              onChange={e => updateSet(i, 'weight', e.target.value)}
-              aria-label={`セット${i + 1}の重量`}
-              className="bg-slate-800 border border-white/10 rounded-xl px-3 py-2.5 text-center
-                text-sm font-bold tabular-nums text-white
-                focus:outline-none focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/30
-                transition-all w-full"
-            />
+            {s.isBodyweight ? (
+              <div className="bg-slate-800 border border-cyan-500/30 rounded-xl px-3 py-2.5 text-center">
+                <span className="text-sm font-bold text-cyan-400">自重</span>
+              </div>
+            ) : (
+              <input
+                type="number"
+                value={s.weight}
+                min="0"
+                step="2.5"
+                placeholder={String(planned.targetWeight)}
+                onChange={e => updateSet(i, 'weight', e.target.value)}
+                aria-label={`セット${i + 1}の重量`}
+                className="bg-slate-800 border border-white/10 rounded-xl px-3 py-2.5 text-center
+                  text-sm font-bold tabular-nums text-white
+                  placeholder:text-slate-600 placeholder:font-normal
+                  focus:outline-none focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/30
+                  transition-all w-full"
+              />
+            )}
             <input
               type="number"
               value={s.reps}
               min="1"
               max="100"
+              placeholder={String(planned.targetReps)}
               onChange={e => updateSet(i, 'reps', e.target.value)}
               aria-label={`セット${i + 1}の回数`}
               className="bg-slate-800 border border-white/10 rounded-xl px-3 py-2.5 text-center
                 text-sm font-bold tabular-nums text-white
+                placeholder:text-slate-600 placeholder:font-normal
                 focus:outline-none focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/30
                 transition-all w-full"
             />

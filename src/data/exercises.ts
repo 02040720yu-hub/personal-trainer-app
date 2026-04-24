@@ -23,12 +23,12 @@ export const EXERCISES: Exercise[] = [
   { id: 'decline-bench-press', name: 'デクラインベンチプレス',   bodyPart: 'chest',     category: 'compound',  equipment: 'バーベル' },
   { id: 'dumbbell-fly',        name: 'ダンベルフライ',           bodyPart: 'chest',     category: 'isolation', equipment: 'ダンベル' },
   { id: 'cable-crossover',     name: 'ケーブルクロスオーバー',   bodyPart: 'chest',     category: 'isolation', equipment: 'ケーブル' },
-  { id: 'dips-chest',          name: 'ディップス（胸）',         bodyPart: 'chest',     category: 'compound',  equipment: '自重', isBodyweight: true },
+  { id: 'dips-chest',          name: 'ディップス（胸）',         bodyPart: 'chest',     category: 'compound',  equipment: '自重', isBodyweight: true, supportsBodyweightToggle: true },
   { id: 'push-up',             name: 'プッシュアップ',           bodyPart: 'chest',     category: 'compound',  equipment: '自重', isBodyweight: true },
 
   // ── 背中 (Back) ─────────────────────────────────────────────────────────────
   { id: 'deadlift',            name: 'デッドリフト',             bodyPart: 'back',      category: 'compound',  equipment: 'バーベル' },
-  { id: 'pull-up',             name: '懸垂（チンアップ）',       bodyPart: 'back',      category: 'compound',  equipment: '自重', isBodyweight: true },
+  { id: 'pull-up',             name: '懸垂（チンアップ）',       bodyPart: 'back',      category: 'compound',  equipment: '自重', isBodyweight: true, supportsBodyweightToggle: true },
   { id: 'lat-pulldown',        name: 'ラットプルダウン',         bodyPart: 'back',      category: 'compound',  equipment: 'マシン' },
   { id: 'barbell-row',         name: 'バーベルロウ',             bodyPart: 'back',      category: 'compound',  equipment: 'バーベル' },
   { id: 'seated-row',          name: 'シーテッドロウ',           bodyPart: 'back',      category: 'compound',  equipment: 'マシン' },
@@ -62,7 +62,7 @@ export const EXERCISES: Exercise[] = [
   { id: 'triceps-pushdown',  name: 'トライセプスプッシュダウン', bodyPart: 'triceps',   category: 'isolation', equipment: 'ケーブル' },
   { id: 'skull-crusher',     name: 'スカルクラッシャー',         bodyPart: 'triceps',   category: 'isolation', equipment: 'バーベル' },
   { id: 'overhead-triceps',  name: 'オーバーヘッドトライセプス', bodyPart: 'triceps',   category: 'isolation', equipment: 'ダンベル' },
-  { id: 'dips-triceps',      name: 'ディップス（三頭筋）',       bodyPart: 'triceps',   category: 'compound',  equipment: '自重', isBodyweight: true },
+  { id: 'dips-triceps',      name: 'ディップス（三頭筋）',       bodyPart: 'triceps',   category: 'compound',  equipment: '自重', isBodyweight: true, supportsBodyweightToggle: true },
   { id: 'close-grip-bench',  name: 'ナローグリップベンチ',       bodyPart: 'triceps',   category: 'compound',  equipment: 'バーベル' },
 
   // ── コア・腹筋 (Core) ────────────────────────────────────────────────────────

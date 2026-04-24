@@ -3,6 +3,8 @@
  * 1RM・10RM 換算および初回目標重量の計算ロジック
  */
 
+import type { WorkoutRecord } from '../types'
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Epley 式による 1RM 推定
 //
@@ -44,6 +46,27 @@ export function calculate10RMTarget(oneRM: number): number {
 export function getBest1RM(sets: { weight: number; reps: number }[]): number {
   if (sets.length === 0) return 0
   return Math.max(...sets.map(s => calculate1RM(s.weight, s.reps)))
+}
+
+/** 種目の全履歴レコードから自己ベスト推定 1RM を取得 */
+export function getBestHistoricalOneRM(exerciseId: string, records: WorkoutRecord[]): number {
+  const recs = records.filter(r => r.exerciseId === exerciseId)
+  if (recs.length === 0) return 0
+  return Math.max(...recs.map(r => r.best1RM))
+}
+
+/**
+ * 自己ベスト 1RM から次回目安（重量・回数）を算出
+ * - 重量: 1RM の 80%（2.5kg 単位に丸め）
+ * - 回数: 筋肥大=8回 / 引き締め=10回
+ */
+export function calcNextTarget(
+  best1RM: number,
+  courseType: 'hypertrophy' | 'toning',
+): { weight: number; reps: number } {
+  const reps = courseType === 'hypertrophy' ? 8 : 10
+  const weight = Math.max(roundToNearestPlate(best1RM * 0.8), 2.5)
+  return { weight, reps }
 }
 
 /**

@@ -174,29 +174,30 @@ export function buildQuickWorkoutPlan(params: {
   const baseSets = selected.length > 0 ? Math.floor(totalSets / selected.length) : 0
   const remainder = selected.length > 0 ? totalSets % selected.length : 0
 
-  const TARGET_REPS = course === 'toning' ? 15 : 10
+  const TARGET_REPS = course === 'toning' ? 10 : 8
 
   const plannedExercises: PlannedExercise[] = selected.map((exercise, i) => {
     const targetSets = Math.max(1, baseSets + (i < remainder ? 1 : 0))
 
-    const latestRecord = recordsByExercise.get(exercise.id)?.[0]
+    const exerciseRecords = recordsByExercise.get(exercise.id) ?? []
+    const bestOneRM = exerciseRecords.length > 0
+      ? Math.max(...exerciseRecords.map(r => r.best1RM))
+      : 0
+
     let targetWeight: number
     let weightSource: 'record' | 'estimate'
 
-    if (latestRecord) {
-      const baseWeight = course === 'toning'
-        ? calculateWeightForReps(latestRecord.best1RM, 15)
-        : latestRecord.nextTargetWeight > 0
-          ? latestRecord.nextTargetWeight
-          : calculateWeightForReps(latestRecord.best1RM, 10)
-      targetWeight = roundToNearestPlate(baseWeight)
+    if (bestOneRM > 0) {
+      // 自己ベスト 1RM の 80% を目安重量とする
+      targetWeight = roundToNearestPlate(bestOneRM * 0.8)
       weightSource = 'record'
     } else {
+      // 初回: 体重・性別から推定
       if (course === 'toning') {
         const initial1RM = calculateInitial1RM(
           exercise.id, profile.weight, profile.gender, exercise.category,
         )
-        targetWeight = roundToNearestPlate(calculateWeightForReps(initial1RM, 15))
+        targetWeight = roundToNearestPlate(calculateWeightForReps(initial1RM, 10))
       } else {
         targetWeight = calculateInitialTargetWeight(
           exercise.id, profile.weight, profile.gender, exercise.category,

@@ -14,8 +14,10 @@ export interface Exercise {
   /** compound: 複合関節種目 / isolation: 単関節種目 */
   category: 'compound' | 'isolation'
   equipment: string
-  /** 自重種目のフラグ（重量入力デフォルトを体重にする） */
+  /** 自重種目のフラグ */
   isBodyweight?: boolean
+  /** 自重トグルを表示する種目（懸垂・ディップスのみ） */
+  supportsBodyweightToggle?: boolean
 }
 
 export interface UserProfile {
@@ -25,8 +27,9 @@ export interface UserProfile {
 }
 
 export interface WorkoutSet {
-  weight: number  // kg
+  weight: number  // kg（自重の場合はプロフィール体重を格納）
   reps: number
+  isBodyweight?: boolean
 }
 
 export interface WorkoutRecord {
@@ -38,4 +41,5 @@ export interface WorkoutRecord {
   nextTargetWeight: number  // 次回の目標重量（10RM 相当, kg）
   /** お任せコース: 'quick' / 手動: 'manual' / 旧データ: undefined（後方互換） */
   source?: 'quick' | 'manual'
+  courseType?: 'hypertrophy' | 'toning'
 }

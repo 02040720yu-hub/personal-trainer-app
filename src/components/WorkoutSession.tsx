@@ -3,11 +3,13 @@ import type { Exercise, WorkoutRecord, WorkoutSet } from '../types'
 import { getProfile, getAllRecords, getLastRecordForExercise, saveRecord } from '../lib/storage'
 import { checkPR } from '../lib/analytics'
 import {
-  calculateInitialTargetWeight,
   getBest1RM,
+  getBestHistoricalOneRM,
+  calcNextTarget,
   calculate10RMTarget,
   roundToNearestPlate,
   calculate1RM,
+  calculateInitialTargetWeight,
 } from '../lib/calculations'
 
 interface Props {
@@ -16,27 +18,41 @@ interface Props {
   onHome: () => void
 }
 
+type CourseType = 'hypertrophy' | 'toning'
+
+type LocalSet = {
+  weight: number | null
+  reps: number | null
+  isBodyweight: boolean
+}
+
 export default function WorkoutSession({ exercise, onBack, onHome }: Props) {
   const profile = getProfile()!
   const lastRecord = getLastRecordForExercise(exercise.id)
-  const isFirstTime = lastRecord === null
 
-  const targetWeight = isFirstTime
-    ? calculateInitialTargetWeight(exercise.id, profile.weight, profile.gender, exercise.category)
-    : roundToNearestPlate(lastRecord.nextTargetWeight)
-
-  const defaultWeight = targetWeight > 0 ? targetWeight : 20
-
-  const [sets, setSets] = useState<WorkoutSet[]>([
-    { weight: defaultWeight, reps: 10 },
-    { weight: defaultWeight, reps: 10 },
-    { weight: defaultWeight, reps: 10 },
+  const [courseType, setCourseType] = useState<CourseType>('hypertrophy')
+  const [sets, setSets] = useState<LocalSet[]>([
+    { weight: null, reps: null, isBodyweight: false },
+    { weight: null, reps: null, isBodyweight: false },
+    { weight: null, reps: null, isBodyweight: false },
   ])
   const [completed, setCompleted] = useState(false)
   const [savedRecord, setSavedRecord] = useState<WorkoutRecord | null>(null)
   const [prResult, setPRResult] = useState<{ weightPR: boolean; onermPR: boolean } | null>(null)
 
-  const updateSet = (index: number, updated: WorkoutSet) =>
+  // 目安計算: 自己ベスト1RMの80% → コース別回数 / 初回は体重推定
+  const allRecords = getAllRecords()
+  const bestOneRM = getBestHistoricalOneRM(exercise.id, allRecords)
+  const isFirstTime = bestOneRM === 0
+
+  const hint = isFirstTime
+    ? {
+        weight: calculateInitialTargetWeight(exercise.id, profile.weight, profile.gender, exercise.category),
+        reps: courseType === 'hypertrophy' ? 8 : 10,
+      }
+    : calcNextTarget(bestOneRM, courseType)
+
+  const updateSet = (index: number, updated: LocalSet) =>
     setSets(prev => prev.map((s, i) => (i === index ? updated : s)))
 
   const addSet = () =>
@@ -48,12 +64,20 @@ export default function WorkoutSession({ exercise, onBack, onHome }: Props) {
   }
 
   const handleSave = () => {
-    const valid = sets.filter(s => s.weight > 0 && s.reps > 0)
+    const valid: WorkoutSet[] = sets
+      .filter(s => {
+        if (s.isBodyweight) return s.reps !== null && s.reps > 0
+        return s.weight !== null && s.weight > 0 && s.reps !== null && s.reps > 0
+      })
+      .map(s => ({
+        weight: s.isBodyweight ? profile.weight : s.weight!,
+        reps: s.reps!,
+        ...(s.isBodyweight ? { isBodyweight: true as const } : {}),
+      }))
+
     if (valid.length === 0) return
 
-    // PR チェックは保存前に既存レコードと比較
     const existingRecords = getAllRecords()
-
     const best1RM = parseFloat(getBest1RM(valid).toFixed(1))
     const nextTarget = roundToNearestPlate(calculate10RMTarget(best1RM))
 
@@ -64,6 +88,7 @@ export default function WorkoutSession({ exercise, onBack, onHome }: Props) {
       sets: valid,
       best1RM,
       nextTargetWeight: nextTarget,
+      courseType,
     }
 
     const pr = checkPR(record, existingRecords)
@@ -73,7 +98,7 @@ export default function WorkoutSession({ exercise, onBack, onHome }: Props) {
     setCompleted(true)
   }
 
-  // ── 完了画面 ────────────────────────────────────────────────────────────────
+  // ── 完了画面 ──────────────────────────────────────────────────────────────────
   if (completed && savedRecord) {
     const isPR = prResult && (prResult.weightPR || prResult.onermPR)
 
@@ -81,19 +106,22 @@ export default function WorkoutSession({ exercise, onBack, onHome }: Props) {
       <div className="flex flex-col min-h-screen px-4 pt-safe bg-sky-50 animate-fade-up">
         <div className="flex-1 flex flex-col justify-center gap-5">
 
-          {/* 完了アイコン */}
           <div className="text-center">
             <div className="w-20 h-20 bg-emerald-50 border border-emerald-200 rounded-3xl flex items-center justify-center mx-auto mb-5">
-              <span className="text-4xl" role="img" aria-label="完了">✅</span>
+              <svg width="40" height="40" viewBox="0 0 40 40" fill="none">
+                <path d="M8 20L16 28L32 12" stroke="#10b981" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
             </div>
             <h2 className="text-2xl font-bold tracking-tight text-slate-900">記録完了！</h2>
             <p className="text-slate-500 text-sm mt-1.5">{exercise.name}</p>
           </div>
 
-          {/* PR バッジ */}
           {isPR && (
             <div className="flex items-center gap-3 bg-amber-50 border border-amber-200 rounded-2xl px-4 py-3.5">
-              <span className="text-2xl" role="img" aria-label="トロフィー">🏆</span>
+              <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
+                <path d="M14 4L17 10L24 11L19 16L20.5 23L14 20L7.5 23L9 16L4 11L11 10L14 4Z"
+                  fill="#f59e0b" stroke="#d97706" strokeWidth="1.2"/>
+              </svg>
               <div>
                 <p className="text-sm font-bold text-amber-700">自己ベスト更新！</p>
                 <p className="text-xs text-amber-600 mt-0.5">
@@ -107,7 +135,6 @@ export default function WorkoutSession({ exercise, onBack, onHome }: Props) {
             </div>
           )}
 
-          {/* 1RM・次回目標 */}
           <div className="bg-white border border-sky-100 rounded-2xl shadow-sm divide-y divide-sky-100">
             <div className="px-5 py-4">
               <p className="label-xs mb-1.5">推定 1RM</p>
@@ -117,16 +144,20 @@ export default function WorkoutSession({ exercise, onBack, onHome }: Props) {
               </p>
             </div>
             <div className="px-5 py-4">
-              <p className="label-xs mb-1.5">次回の目標</p>
-              <p className="text-2xl font-bold text-emerald-600 tabular-nums leading-none">
-                {savedRecord.nextTargetWeight}
-                <span className="text-base font-semibold text-emerald-400 ml-1">kg × 10</span>
-              </p>
-              <p className="text-xs text-slate-400 mt-1.5">Epley 式による推定値（目安です）</p>
+              <p className="label-xs mb-1.5">次回の目安</p>
+              {(() => {
+                const next = calcNextTarget(savedRecord.best1RM, courseType)
+                return (
+                  <p className="text-2xl font-bold text-emerald-600 tabular-nums leading-none">
+                    {next.weight}
+                    <span className="text-base font-semibold text-emerald-400 ml-1">kg × {next.reps}回</span>
+                  </p>
+                )
+              })()}
+              <p className="text-xs text-slate-400 mt-1.5">自己ベスト1RMの80%（Epley式）</p>
             </div>
           </div>
 
-          {/* セット一覧 */}
           <div className="bg-white border border-sky-100 rounded-xl shadow-sm">
             <p className="label-xs px-4 py-3 border-b border-sky-100">今日のセット</p>
             {savedRecord.sets.map((s, i) => (
@@ -136,14 +167,15 @@ export default function WorkoutSession({ exercise, onBack, onHome }: Props) {
                   border-b border-sky-50 last:border-0 text-sm"
               >
                 <span className="text-slate-500">セット {i + 1}</span>
-                <span className="font-semibold tabular-nums text-slate-900">{s.weight} kg × {s.reps} 回</span>
+                <span className="font-semibold tabular-nums text-slate-900">
+                  {s.isBodyweight ? '自重' : `${s.weight} kg`} × {s.reps} 回
+                </span>
               </div>
             ))}
           </div>
 
         </div>
 
-        {/* アクションボタン */}
         <div className="flex flex-col gap-2.5 py-5 pb-safe">
           <button
             type="button"
@@ -170,7 +202,7 @@ export default function WorkoutSession({ exercise, onBack, onHome }: Props) {
     )
   }
 
-  // ── 記録画面 ────────────────────────────────────────────────────────────────
+  // ── 記録画面 ──────────────────────────────────────────────────────────────────
   return (
     <div className="flex flex-col min-h-screen bg-sky-50">
 
@@ -189,39 +221,56 @@ export default function WorkoutSession({ exercise, onBack, onHome }: Props) {
         <p className="text-slate-400 text-xs mt-0.5">{exercise.equipment}</p>
       </div>
 
-      {/* スクロールコンテンツ */}
       <div className="flex-1 px-4 pt-4 pb-32 overflow-y-auto">
 
-        {/* 目標カード */}
+        {/* コース選択タブ */}
+        <div className="flex bg-slate-100 rounded-xl p-1 gap-1 mb-5">
+          <button
+            type="button"
+            onClick={() => setCourseType('hypertrophy')}
+            aria-pressed={courseType === 'hypertrophy'}
+            className={`flex-1 rounded-lg py-2.5 text-sm font-bold transition-all
+              focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500
+              ${courseType === 'hypertrophy'
+                ? 'bg-sky-500 text-white shadow-sm'
+                : 'text-slate-500 hover:text-slate-700'}`}
+          >
+            筋肥大
+          </button>
+          <button
+            type="button"
+            onClick={() => setCourseType('toning')}
+            aria-pressed={courseType === 'toning'}
+            className={`flex-1 rounded-lg py-2.5 text-sm font-bold transition-all
+              focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-500
+              ${courseType === 'toning'
+                ? 'bg-rose-500 text-white shadow-sm'
+                : 'text-slate-500 hover:text-slate-700'}`}
+          >
+            引き締め
+          </button>
+        </div>
+
+        {/* 目安カード */}
         <div className="bg-white border border-sky-100 rounded-2xl shadow-sm p-5 mb-5">
           <p className="label-xs mb-3">
-            {isFirstTime ? '初回目安' : '今日の目標'}
+            {isFirstTime ? '初回目安（体重・性別から推定）' : '目安（自己ベスト1RMの80%）'}
           </p>
-          <div className="flex items-end gap-2 mb-2">
+          <div className="flex items-end gap-2 mb-1">
             <span className="text-5xl font-bold text-sky-600 tabular-nums leading-none">
-              {targetWeight}
+              {hint.weight}
             </span>
-            <span className="text-slate-400 text-lg mb-0.5">kg × 10</span>
+            <span className="text-slate-500 text-xl mb-1">kg × {hint.reps}回</span>
           </div>
-          <p className="text-xs text-slate-400 leading-relaxed">
-            {isFirstTime
-              ? '体重・性別から算出した初回目安です。無理のない範囲で始めてください。'
-              : '前回の記録から Epley 式で算出した目標値です。'}
-          </p>
-
-          {lastRecord && (
-            <div className="mt-3 pt-3 border-t border-sky-50 flex items-center justify-between text-xs">
-              <span className="text-slate-400">
-                前回: {new Date(lastRecord.date).toLocaleDateString('ja-JP', { month: 'short', day: 'numeric' })}
-              </span>
-              <span className="text-slate-500 tabular-nums">1RM ≈ {lastRecord.best1RM.toFixed(1)} kg</span>
-            </div>
-          )}
-
-          {exercise.isBodyweight && (
-            <p className="text-xs text-sky-600 mt-3 bg-sky-50 border border-sky-100 rounded-lg px-3 py-2 leading-relaxed">
-              自重種目：加重なしの場合は体重（{profile.weight} kg）を入力してください
+          {!isFirstTime && (
+            <p className="text-xs text-slate-400 mt-2">
+              1RM ≈ {bestOneRM.toFixed(1)} kg → 80% = {hint.weight} kg
             </p>
+          )}
+          {lastRecord && (
+            <div className="mt-3 pt-3 border-t border-sky-50 text-xs text-slate-400">
+              前回: {new Date(lastRecord.date).toLocaleDateString('ja-JP', { month: 'short', day: 'numeric' })}
+            </div>
           )}
         </div>
 
@@ -233,6 +282,10 @@ export default function WorkoutSession({ exercise, onBack, onHome }: Props) {
               key={index}
               set={set}
               index={index}
+              hintWeight={hint.weight}
+              hintReps={hint.reps}
+              profileWeight={profile.weight}
+              supportsBodyweightToggle={exercise.supportsBodyweightToggle ?? false}
               onChange={updated => updateSet(index, updated)}
               onRemove={() => removeSet(index)}
               canRemove={sets.length > 1}
@@ -240,7 +293,6 @@ export default function WorkoutSession({ exercise, onBack, onHome }: Props) {
           ))}
         </div>
 
-        {/* セット追加 */}
         <button
           type="button"
           onClick={addSet}
@@ -277,26 +329,41 @@ export default function WorkoutSession({ exercise, onBack, onHome }: Props) {
 // ── SetRow ────────────────────────────────────────────────────────────────────
 
 interface SetRowProps {
-  set: WorkoutSet
+  set: LocalSet
   index: number
-  onChange: (s: WorkoutSet) => void
+  hintWeight: number
+  hintReps: number
+  profileWeight: number
+  supportsBodyweightToggle: boolean
+  onChange: (s: LocalSet) => void
   onRemove: () => void
   canRemove: boolean
 }
 
-function SetRow({ set, index, onChange, onRemove, canRemove }: SetRowProps) {
+function SetRow({
+  set, index, hintWeight, hintReps, profileWeight, supportsBodyweightToggle, onChange, onRemove, canRemove,
+}: SetRowProps) {
   const adjustWeight = (delta: number) => {
-    const v = Math.max(0, parseFloat((set.weight + delta).toFixed(1)))
+    if (set.isBodyweight) return
+    const base = set.weight !== null ? set.weight : hintWeight
+    const v = Math.max(0, parseFloat((base + delta).toFixed(1)))
     onChange({ ...set, weight: v })
   }
+
   const adjustReps = (delta: number) => {
-    const v = Math.max(1, set.reps + delta)
+    const base = set.reps !== null ? set.reps : hintReps
+    const v = Math.max(1, base + delta)
     onChange({ ...set, reps: v })
   }
 
+  const toggleBodyweight = () => {
+    onChange({ ...set, isBodyweight: !set.isBodyweight, weight: null })
+  }
+
+  const effectiveWeight = set.isBodyweight ? profileWeight : set.weight
   const est1RM =
-    set.weight > 0 && set.reps > 0
-      ? calculate1RM(set.weight, set.reps).toFixed(1)
+    effectiveWeight !== null && effectiveWeight > 0 && set.reps !== null && set.reps > 0
+      ? calculate1RM(effectiveWeight, set.reps).toFixed(1)
       : null
 
   return (
@@ -326,27 +393,52 @@ function SetRow({ set, index, onChange, onRemove, canRemove }: SetRowProps) {
 
       {/* 重量 */}
       <div className="mb-3">
-        <p className="text-xs text-slate-400 mb-1.5">重量</p>
-        <div className="flex items-center gap-1.5">
-          <AdjBtn label="-5"   onClick={() => adjustWeight(-5)} />
-          <AdjBtn label="-2.5" onClick={() => adjustWeight(-2.5)} wide />
-          <input
-            type="number"
-            value={set.weight}
-            onChange={e => {
-              const v = parseFloat(e.target.value)
-              if (!isNaN(v) && v >= 0) onChange({ ...set, weight: v })
-            }}
-            inputMode="decimal"
-            aria-label={`セット ${index + 1} の重量`}
-            className="flex-1 min-w-0 h-11 bg-sky-50 border border-sky-200 rounded-lg
-              text-center text-lg font-bold tabular-nums text-slate-900
-              focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 focus:border-sky-400"
-          />
-          <AdjBtn label="+2.5" onClick={() => adjustWeight(2.5)} wide />
-          <AdjBtn label="+5"   onClick={() => adjustWeight(5)} />
-          <span className="text-xs text-slate-400 w-5 text-center shrink-0">kg</span>
+        <div className="flex items-center justify-between mb-1.5">
+          <p className="text-xs text-slate-400">重量</p>
+          {supportsBodyweightToggle && (
+            <button
+              type="button"
+              onClick={toggleBodyweight}
+              className={`text-xs font-semibold px-2.5 py-1 rounded-lg transition-all
+                focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-sky-500
+                ${set.isBodyweight
+                  ? 'bg-sky-500 text-white'
+                  : 'bg-sky-50 text-sky-500 border border-sky-200 hover:bg-sky-100'}`}
+            >
+              自重
+            </button>
+          )}
         </div>
+
+        {set.isBodyweight ? (
+          <div className="h-11 bg-sky-50 border border-sky-200 rounded-lg flex items-center justify-center gap-2">
+            <span className="text-base font-bold text-sky-600">自重</span>
+            <span className="text-xs text-sky-400">({profileWeight} kg)</span>
+          </div>
+        ) : (
+          <div className="flex items-center gap-1.5">
+            <AdjBtn label="-5"   onClick={() => adjustWeight(-5)} />
+            <AdjBtn label="-2.5" onClick={() => adjustWeight(-2.5)} wide />
+            <input
+              type="number"
+              value={set.weight ?? ''}
+              placeholder={String(hintWeight)}
+              onChange={e => {
+                const v = parseFloat(e.target.value)
+                onChange({ ...set, weight: isNaN(v) ? null : Math.max(0, v) })
+              }}
+              inputMode="decimal"
+              aria-label={`セット ${index + 1} の重量`}
+              className="flex-1 min-w-0 h-11 bg-sky-50 border border-sky-200 rounded-lg
+                text-center text-lg font-bold tabular-nums text-slate-900
+                placeholder:text-sky-300 placeholder:font-normal
+                focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 focus:border-sky-400"
+            />
+            <AdjBtn label="+2.5" onClick={() => adjustWeight(2.5)} wide />
+            <AdjBtn label="+5"   onClick={() => adjustWeight(5)} />
+            <span className="text-xs text-slate-400 w-5 text-center shrink-0">kg</span>
+          </div>
+        )}
       </div>
 
       {/* 回数 */}
@@ -356,15 +448,17 @@ function SetRow({ set, index, onChange, onRemove, canRemove }: SetRowProps) {
           <AdjBtn label="−" onClick={() => adjustReps(-1)} wide />
           <input
             type="number"
-            value={set.reps}
+            value={set.reps ?? ''}
+            placeholder={String(hintReps)}
             onChange={e => {
               const v = parseInt(e.target.value, 10)
-              if (!isNaN(v) && v >= 1) onChange({ ...set, reps: v })
+              onChange({ ...set, reps: isNaN(v) ? null : Math.max(1, v) })
             }}
             inputMode="numeric"
             aria-label={`セット ${index + 1} の回数`}
             className="flex-1 min-w-0 h-11 bg-sky-50 border border-sky-200 rounded-lg
               text-center text-lg font-bold tabular-nums text-slate-900
+              placeholder:text-sky-300 placeholder:font-normal
               focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 focus:border-sky-400"
           />
           <AdjBtn label="＋" onClick={() => adjustReps(1)} wide />
