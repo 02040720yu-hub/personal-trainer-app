@@ -9,6 +9,7 @@ import {
   calculateInitial1RM,
   calculateInitialTargetWeight,
   calculateInitialTargetWeightForExercise,
+  calcNextTarget,
 } from './calculations'
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -251,5 +252,33 @@ describe('calculateInitialTargetWeightForExercise (Phase 4)', () => {
     const result = calculateInitialTargetWeight('mountain-climber', 60, 'male', 'compound')
     expect(result).toBeGreaterThanOrEqual(2.5)
     expect(result).toBeLessThan(10)
+  })
+})
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Phase 7: コース別の次回目標重量
+// ─────────────────────────────────────────────────────────────────────────────
+
+describe('calcNextTarget: コース別の次回目標 (Phase 7)', () => {
+  it('筋肥大コースは 8RM 相当を返す (1RM × 0.8 程度)', () => {
+    const result = calcNextTarget(100, 'hypertrophy')
+    expect(result.reps).toBe(8)
+    // 1RM 100kg → 8RM ≈ 80kg
+    expect(result.weight).toBeGreaterThanOrEqual(77.5)
+    expect(result.weight).toBeLessThanOrEqual(82.5)
+  })
+
+  it('引き締めコースは 10RM 相当を返す (1RM × 0.75)', () => {
+    const result = calcNextTarget(100, 'toning')
+    expect(result.reps).toBe(10)
+    // 1RM 100kg → 10RM ≈ 75kg
+    expect(result.weight).toBeGreaterThanOrEqual(72.5)
+    expect(result.weight).toBeLessThanOrEqual(77.5)
+  })
+
+  it('筋肥大と引き締めで重量が異なる(同じ1RMでも)', () => {
+    const hyp = calcNextTarget(100, 'hypertrophy')
+    const ton = calcNextTarget(100, 'toning')
+    expect(hyp.weight).toBeGreaterThan(ton.weight)
   })
 })

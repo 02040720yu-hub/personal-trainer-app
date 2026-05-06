@@ -21,7 +21,7 @@ import {
   type PlannedExercise,
   type QuickWorkoutPlan,
 } from '../lib/quickWorkout'
-import { calculate10RMTarget, roundToNearestPlate, getBest1RM, calcNextTarget } from '../lib/calculations'
+import { getBest1RM, calcNextTarget } from '../lib/calculations'
 import { checkPR } from '../lib/analytics'
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -107,13 +107,14 @@ interface RecordedExercise {
 interface Props {
   onOpenDashboard: () => void
   onOpenHeatmap: () => void
+  onOpenHistory: () => void
   onOpenSettings: () => void
   onOpenTitle: () => void
 }
 
 type Step = 'select' | 'plan' | 'record' | 'summary'
 
-export default function QuickWorkout({ onOpenDashboard, onOpenHeatmap, onOpenSettings, onOpenTitle }: Props) {
+export default function QuickWorkout({ onOpenDashboard, onOpenHeatmap, onOpenHistory, onOpenSettings, onOpenTitle }: Props) {
   const [step, setStep] = useState<Step>('select')
   // 初期値はプロファイル + 曜日ベースの自動ローテーション
   const [minutes, setMinutes] = useState<Minutes>(() => {
@@ -284,6 +285,7 @@ export default function QuickWorkout({ onOpenDashboard, onOpenHeatmap, onOpenSet
             onGenerate={handleGenerate}
             onOpenDashboard={onOpenDashboard}
             onOpenHeatmap={onOpenHeatmap}
+            onOpenHistory={onOpenHistory}
             onOpenTitle={onOpenTitle}
           />
         )}
@@ -299,6 +301,7 @@ export default function QuickWorkout({ onOpenDashboard, onOpenHeatmap, onOpenSet
           <RecordStep
             key={currentIndex}
             planned={plan.exercises[currentIndex]}
+            courseType={plan.courseType}
             index={currentIndex}
             total={plan.exercises.length}
             onSaved={handleExerciseSaved}
@@ -325,7 +328,7 @@ function SelectStep({
   minutes, focus, customBodyParts, courseType, toningPreset, canGenerate,
   onMinutesChange, onFocusChange, onCustomBodyPartsChange,
   onCourseTypeChange, onToningPresetChange, onGenerate,
-  onOpenDashboard, onOpenHeatmap, onOpenTitle,
+  onOpenDashboard, onOpenHeatmap, onOpenHistory, onOpenTitle,
 }: {
   minutes: Minutes
   focus: Focus
@@ -341,6 +344,7 @@ function SelectStep({
   onGenerate: () => void
   onOpenDashboard: () => void
   onOpenHeatmap: () => void
+  onOpenHistory: () => void
   onOpenTitle: () => void
 }) {
   const [detailsOpen, setDetailsOpen] = useState(false)
@@ -458,13 +462,13 @@ function SelectStep({
       {/* 導入テキスト */}
       {isToning ? (
         <div className="bg-gradient-to-r from-rose-500 to-pink-400 text-white rounded-2xl px-4 py-3.5">
-          <p className="text-sm font-bold">女性向け引き締めコース</p>
-          <p className="text-xs text-rose-100 mt-0.5">1RMの80%・10回で脂肪燃焼＆引き締めを目指します</p>
+          <p className="text-sm font-bold">メリハリのある体を目指すコース</p>
+          <p className="text-xs text-rose-100 mt-0.5">お尻・脚・お腹を中心に、無理のない重さで10回×3セット</p>
         </div>
       ) : (
         <div className="bg-gradient-to-r from-cyan-600 to-cyan-500 text-white rounded-2xl px-4 py-3.5">
-          <p className="text-sm font-bold">部位を選ぶだけでスタートできます</p>
-          <p className="text-xs text-cyan-100 mt-0.5">種目は自動で決まります。手動選択は不要です。</p>
+          <p className="text-sm font-bold">筋肉をつけて体を大きくするコース</p>
+          <p className="text-xs text-cyan-100 mt-0.5">あなたの目標重量に合わせて8回×3セットでしっかり追い込み</p>
         </div>
       )}
 
@@ -700,26 +704,33 @@ function SelectStep({
       {/* 記録を見る */}
       <section>
         <p className="label-xs mb-2">記録を見る</p>
-        <div className="flex gap-2">
+        <div className="grid grid-cols-3 gap-2">
           <button
             type="button"
             onClick={onOpenDashboard}
-            className="flex-1 flex items-center justify-between bg-slate-900 border border-white/10
-              rounded-2xl py-3.5 px-4 text-slate-300 hover:border-white/20
+            className="flex items-center justify-center bg-slate-900 border border-white/10
+              rounded-2xl py-3.5 px-2 text-slate-300 hover:border-white/20
               active:scale-95 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500"
           >
-            <span className="text-xs font-semibold">ダッシュボード</span>
-            <span className="text-slate-600 text-xs">→</span>
+            <span className="text-xs font-semibold">統計</span>
           </button>
           <button
             type="button"
             onClick={onOpenHeatmap}
-            className="flex-1 flex items-center justify-between bg-slate-900 border border-white/10
-              rounded-2xl py-3.5 px-4 text-slate-300 hover:border-white/20
+            className="flex items-center justify-center bg-slate-900 border border-white/10
+              rounded-2xl py-3.5 px-2 text-slate-300 hover:border-white/20
               active:scale-95 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500"
           >
-            <span className="text-xs font-semibold">活動カレンダー</span>
-            <span className="text-slate-600 text-xs">→</span>
+            <span className="text-xs font-semibold">カレンダー</span>
+          </button>
+          <button
+            type="button"
+            onClick={onOpenHistory}
+            className="flex items-center justify-center bg-slate-900 border border-white/10
+              rounded-2xl py-3.5 px-2 text-slate-300 hover:border-white/20
+              active:scale-95 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500"
+          >
+            <span className="text-xs font-semibold">履歴</span>
           </button>
         </div>
       </section>
@@ -837,9 +848,10 @@ function PlanExerciseCard({ planned, index }: { planned: PlannedExercise; index:
 interface SetInput { weight: string; reps: string; isBodyweight: boolean }
 
 function RecordStep({
-  planned, index, total, onSaved,
+  planned, courseType, index, total, onSaved,
 }: {
   planned: PlannedExercise
+  courseType: CourseType
   index: number
   total: number
   onSaved: (rec: RecordedExercise) => void
@@ -889,7 +901,8 @@ function RecordStep({
     }
 
     const best1RM = getBest1RM(parsedSets)
-    const nextTargetWeight = roundToNearestPlate(calculate10RMTarget(best1RM))
+    // コース別に次回目標を算出（筋肥大: 8RM / 引き締め: 10RM）
+    const nextTargetWeight = calcNextTarget(best1RM, courseType).weight
 
     const record: WorkoutRecord = {
       id: `${planned.exercise.id}-${Date.now()}`,
@@ -899,6 +912,7 @@ function RecordStep({
       best1RM,
       nextTargetWeight,
       source: 'quick',
+      courseType,
     }
 
     const existingRecords = getAllRecords()

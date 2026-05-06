@@ -57,15 +57,19 @@ export function getBestHistoricalOneRM(exerciseId: string, records: WorkoutRecor
 
 /**
  * 自己ベスト 1RM から次回目安（重量・回数）を算出
- * - 重量: 1RM の 80%（2.5kg 単位に丸め）
  * - 回数: 筋肥大=8回 / 引き締め=10回
+ * - 重量: 上記 reps の Epley 逆算（筋肥大≈1RM×0.79 / 引き締め=1RM×0.75）
+ *         を 2.5kg 単位に丸め、最小 2.5kg 保証
  */
 export function calcNextTarget(
   best1RM: number,
   courseType: 'hypertrophy' | 'toning',
 ): { weight: number; reps: number } {
   const reps = courseType === 'hypertrophy' ? 8 : 10
-  const weight = Math.max(roundToNearestPlate(best1RM * 0.8), 2.5)
+  const weight = Math.max(
+    roundToNearestPlate(calculateWeightForReps(best1RM, reps)),
+    2.5,
+  )
   return { weight, reps }
 }
 

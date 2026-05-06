@@ -9,7 +9,7 @@ import {
   calculate10RMTarget,
   roundToNearestPlate,
   calculate1RM,
-  calculateInitialTargetWeight,
+  calculateInitialTargetWeightForExercise,
 } from '../lib/calculations'
 
 interface Props {
@@ -46,7 +46,7 @@ export default function WorkoutSession({ exercise, onBack, onHome }: Props) {
 
   const hint = isFirstTime
     ? {
-        weight: calculateInitialTargetWeight(exercise.id, profile.weight, profile.gender, exercise.category),
+        weight: calculateInitialTargetWeightForExercise(exercise, profile.weight, profile.gender),
         reps: courseType === 'hypertrophy' ? 8 : 10,
       }
     : calcNextTarget(bestOneRM, courseType)

@@ -56,11 +56,18 @@ export default function App() {
   const [selectedBodyPart, setSelectedBodyPart] = useState<BodyPart | null>(null)
   const [selectedExercise, setSelectedExercise] = useState<Exercise | null>(null)
 
+  // 設定画面から戻った回数。QuickWorkout の key として使い、
+  // 設定変更後にホームへ戻るたびに再マウントして最新プロファイルで初期化する。
+  const [settingsCloseCount, setSettingsCloseCount] = useState(0)
+
   /** quick に戻る（全画面の「戻る」先） */
   const goQuick = () => setMainScreen('quick')
 
   const openSettings = () => setLayer('settings')
-  const closeSettings = () => setLayer('main')
+  const closeSettings = () => {
+    setLayer('main')
+    setSettingsCloseCount(c => c + 1)
+  }
 
   const handleDataCleared = () => {
     goQuick()
@@ -96,8 +103,10 @@ export default function App() {
             {/* ── 主導線 ── */}
             {mainScreen === 'quick' && (
               <QuickWorkout
+                key={settingsCloseCount}
                 onOpenDashboard={() => setMainScreen('dashboard')}
                 onOpenHeatmap={() => setMainScreen('heatmap')}
+                onOpenHistory={() => setMainScreen('history')}
                 onOpenSettings={openSettings}
                 onOpenTitle={() => setLayer('title')}
               />
