@@ -58,16 +58,10 @@ function makeRecord(
 // ── calcCapacity ──────────────────────────────────────────────────────────────
 
 describe('calcCapacity', () => {
-  it('20分: ウォームアップ8分引いた12分 → 4セット, 1種目', () => {
-    const { totalSets, exerciseCount } = calcCapacity(20)
-    expect(totalSets).toBe(4)
-    expect(exerciseCount).toBe(1)
-  })
-
-  it('30分 → 7セット, 2種目', () => {
+  it('30分: ウォームアップ8分引いた22分 → 7セット, 2種目', () => {
     const { totalSets, exerciseCount } = calcCapacity(30)
-    expect(totalSets).toBe(7)
-    expect(exerciseCount).toBe(2)
+    expect(totalSets).toBe(7)      // floor(22/3) = 7
+    expect(exerciseCount).toBe(2)  // floor(7/3) = 2
   })
 
   it('45分 → 12セット, 4種目', () => {
@@ -82,10 +76,10 @@ describe('calcCapacity', () => {
     expect(exerciseCount).toBe(5)
   })
 
-  it('90分 → 27セット, 8種目（上限）', () => {
-    const { totalSets, exerciseCount } = calcCapacity(90)
-    expect(totalSets).toBe(27)
-    expect(exerciseCount).toBe(8)
+  it('75分 → 22セット, 7種目', () => {
+    const { totalSets, exerciseCount } = calcCapacity(75)
+    expect(totalSets).toBe(22)     // floor(67/3) = 22
+    expect(exerciseCount).toBe(7)  // floor(22/3) = 7
   })
 
   it('5分（ウォームアップ以下）→ 0セット, 1種目（最小）', () => {
@@ -221,7 +215,7 @@ describe('buildQuickWorkoutPlan - custom bodyParts', () => {
 
   it('全7部位（custom）でプラン生成できる', () => {
     const plan = buildQuickWorkoutPlan({
-      minutes: 90, focus: 'custom',
+      minutes: 75, focus: 'custom',
       customBodyParts: ['chest', 'back', 'legs', 'shoulders', 'biceps', 'triceps', 'core'],
       profile: PROFILE, records: [], exercises: EXERCISES, seed: 3,
     })
@@ -346,7 +340,7 @@ describe('buildQuickWorkoutPlan - course / experienceLevel フィルタ (Phase 3
   it('1) hypertrophy コース: 選出される全種目で suitableFor.hypertrophy === true', () => {
     for (let seed = 0; seed < 30; seed++) {
       const plan = buildQuickWorkoutPlan({
-        minutes: 90, focus: 'full', courseType: 'hypertrophy',
+        minutes: 75, focus: 'full', courseType: 'hypertrophy',
         profile: PROFILE, records: [], exercises: MIXED, seed,
       })
       plan.exercises.forEach(p => {
@@ -358,7 +352,7 @@ describe('buildQuickWorkoutPlan - course / experienceLevel フィルタ (Phase 3
   it('2) toning コース: 選出される全種目で suitableFor.toning === true', () => {
     for (let seed = 0; seed < 30; seed++) {
       const plan = buildQuickWorkoutPlan({
-        minutes: 90, focus: 'full', courseType: 'toning',
+        minutes: 75, focus: 'full', courseType: 'toning',
         profile: PROFILE, records: [], exercises: MIXED, seed,
       })
       plan.exercises.forEach(p => {
@@ -371,7 +365,7 @@ describe('buildQuickWorkoutPlan - course / experienceLevel フィルタ (Phase 3
     const HYPER_ONLY = ['bench-press', 'deadlift', 'squat']
     for (let seed = 0; seed < 30; seed++) {
       const plan = buildQuickWorkoutPlan({
-        minutes: 90, focus: 'full', courseType: 'toning',
+        minutes: 75, focus: 'full', courseType: 'toning',
         profile: PROFILE, records: [], exercises: MIXED, seed,
       })
       const ids = plan.exercises.map(p => p.exercise.id)
@@ -384,7 +378,7 @@ describe('buildQuickWorkoutPlan - course / experienceLevel フィルタ (Phase 3
   it("4) experienceLevel='beginner' のとき advanced 種目は選出されない", () => {
     for (let seed = 0; seed < 30; seed++) {
       const plan = buildQuickWorkoutPlan({
-        minutes: 90, focus: 'full', courseType: 'hypertrophy',
+        minutes: 75, focus: 'full', courseType: 'hypertrophy',
         experienceLevel: 'beginner',
         profile: PROFILE, records: [], exercises: MIXED, seed,
       })
@@ -480,7 +474,7 @@ describe('buildQuickWorkoutPlan: 部位均等配分 (Phase 6)', () => {
     // 90分 → 8種目（calcCapacity 上限）。legs/core 2部位なので、ラウンドロビンで
     // legs だけで埋め尽くさず core も 1 種目以上取られる
     const plan = buildQuickWorkoutPlan({
-      minutes: 90,
+      minutes: 75,
       focus: 'custom',
       customBodyParts: ['legs', 'core'],
       courseType: 'toning',

@@ -9,6 +9,17 @@ const KEYS = {
 
 // ── Profile ──────────────────────────────────────────────────────────────────
 
+/**
+ * defaultMinutes の値を有効値域 (30 | 45 | 60 | 75) に正規化する。
+ * Phase 9 で 20 / 90 を廃止したため、旧データや範囲外の値はデフォルト 45 にフォールバック。
+ */
+function normalizeDefaultMinutes(value: unknown): 30 | 45 | 60 | 75 {
+  if (value === 30 || value === 45 || value === 60 || value === 75) {
+    return value
+  }
+  return 45
+}
+
 export function getProfile(): UserProfile | null {
   try {
     const raw = localStorage.getItem(KEYS.PROFILE)
@@ -22,7 +33,7 @@ export function getProfile(): UserProfile | null {
       defaultCourse: parsed.defaultCourse
         ?? (parsed.gender === 'female' ? 'toning' : 'hypertrophy'),
       experienceLevel: parsed.experienceLevel ?? 'beginner',
-      defaultMinutes: parsed.defaultMinutes ?? 45,
+      defaultMinutes: normalizeDefaultMinutes(parsed.defaultMinutes),
     }
   } catch {
     return null

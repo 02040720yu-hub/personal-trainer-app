@@ -64,7 +64,7 @@ export interface UserProfile {
   experienceLevel: 'beginner' | 'intermediate' | 'advanced'
 
   /** 標準のトレーニング時間 (分) */
-  defaultMinutes: 20 | 30 | 45 | 60 | 90
+  defaultMinutes: 30 | 45 | 60 | 75
 }
 
 export interface WorkoutSet {

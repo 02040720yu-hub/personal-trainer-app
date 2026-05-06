@@ -30,7 +30,7 @@ import { checkPR } from '../lib/analytics'
 // 定数
 // ─────────────────────────────────────────────────────────────────────────────
 
-const TIME_OPTIONS = [20, 30, 45, 60, 90] as const
+const TIME_OPTIONS = [30, 45, 60, 75] as const
 type Minutes = (typeof TIME_OPTIONS)[number]
 
 const FOCUS_OPTIONS: { value: Exclude<Focus, 'custom'>; label: string; emoji: string; desc: string }[] = [
@@ -473,7 +473,7 @@ function SelectStep({
       {/* 時間選択 */}
       <section>
         <p className="label-xs mb-3">トレーニング時間</p>
-        <div className="grid grid-cols-5 gap-2">
+        <div className="grid grid-cols-4 gap-2">
           {TIME_OPTIONS.map(m => (
             <button
               key={m}

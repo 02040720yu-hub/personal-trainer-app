@@ -8,7 +8,7 @@ interface Props {
 
 type Step = 1 | 2 | 3
 
-const TIME_OPTIONS = [20, 30, 45, 60, 90] as const
+const TIME_OPTIONS = [30, 45, 60, 75] as const
 type Minutes = (typeof TIME_OPTIONS)[number]
 
 export default function ProfileSetup({ onComplete }: Props) {
@@ -345,7 +345,7 @@ function Step3({
         {/* 標準時間 */}
         <div className="flex flex-col gap-2">
           <span className="label-xs">1 回の時間</span>
-          <div className="grid grid-cols-5 gap-2">
+          <div className="grid grid-cols-4 gap-2">
             {TIME_OPTIONS.map(m => (
               <button
                 key={m}

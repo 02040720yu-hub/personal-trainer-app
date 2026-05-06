@@ -54,7 +54,7 @@ export default function SettingsScreen({ onBack, onDataCleared }: Props) {
 // ─────────────────────────────────────────────────────────────────────────────
 
 type Minutes = UserProfile['defaultMinutes']
-const TIME_OPTIONS: Minutes[] = [20, 30, 45, 60, 90]
+const TIME_OPTIONS: Minutes[] = [30, 45, 60, 75]
 
 function ProfileSection() {
   const current = getProfile()
@@ -194,7 +194,7 @@ function ProfileSection() {
       {/* 標準時間 */}
       <div className="space-y-2">
         <p className="label-xs">標準のトレーニング時間</p>
-        <div className="grid grid-cols-5 gap-2" role="group" aria-label="標準時間選択">
+        <div className="grid grid-cols-4 gap-2" role="group" aria-label="標準時間選択">
           {TIME_OPTIONS.map(m => (
             <button
               key={m}
