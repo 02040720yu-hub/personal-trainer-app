@@ -117,6 +117,8 @@ function applyHipPriority(exercises: Exercise[], course: CourseType): Exercise[]
  *  1. その部位 × suitableFor[course] でフィルタ
  *  2. experienceLevel で難易度フィルタ。結果が 0 件になる場合はフィルタを緩和
  *  3. compound 優先 → isolation の順に並べ、それぞれ内部はシャッフル
+ *  4. legs × toning のときだけ、ヒップ系種目を候補先頭に並べ替え
+ *     （他部位の候補を侵食しないよう、bp 内に閉じた処理にしている）
  */
 function getCandidatesForBodyPart(
   bp: BodyPart,
@@ -138,7 +140,14 @@ function getCandidatesForBodyPart(
 
   const compound  = shuffle(filtered.filter(e => e.category === 'compound'),  rand)
   const isolation = shuffle(filtered.filter(e => e.category === 'isolation'), rand)
-  return [...compound, ...isolation]
+  let result = [...compound, ...isolation]
+
+  // legs × toning のときだけヒップ優遇を bp 内に閉じて適用
+  if (bp === 'legs' && course === 'toning') {
+    result = applyHipPriority(result, course)
+  }
+
+  return result
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -203,28 +212,50 @@ export function buildQuickWorkoutPlan(params: {
     recordsByExercise.set(id, list)
   }
 
-  // 種目候補を部位優先順 × compound 優先で並べる
-  // - suitableFor[course] でコース別フィルタ
-  // - experienceLevel で難易度フィルタ（候補が 0 件になる場合は緩和）
-  // - toning && legs はヒップ系種目を先頭に並べ替え
-  const candidates: Exercise[] = []
+  // 部位ごとに候補リストを別々に保持（ヒップ優遇は getCandidatesForBodyPart 内で
+  // legs かつ toning のときだけ適用される）
+  const candidatesByBp = new Map<BodyPart, Exercise[]>()
   for (const bp of bodyPartOrder) {
-    const bpCandidates = applyHipPriority(
+    candidatesByBp.set(
+      bp,
       getCandidatesForBodyPart(bp, exercises, course, experienceLevel, rand),
-      course,
     )
-    candidates.push(...bpCandidates)
   }
 
-  // 重複排除しつつ exerciseCount 件選出
+  // ラウンドロビンで部位を順に巡回し、1種目ずつ取る。
+  // これにより「全身プリセットで脚4種目」のような偏りを防ぐ。
   const selected: Exercise[] = []
   const usedIds = new Set<string>()
-  for (const ex of candidates) {
-    if (selected.length >= exerciseCount) break
-    if (!usedIds.has(ex.id)) {
-      selected.push(ex)
-      usedIds.add(ex.id)
+  const cursors = new Map<BodyPart, number>(
+    bodyPartOrder.map(bp => [bp, 0])
+  )
+
+  while (selected.length < exerciseCount) {
+    let pickedThisRound = false
+
+    for (const bp of bodyPartOrder) {
+      if (selected.length >= exerciseCount) break
+
+      const list = candidatesByBp.get(bp) ?? []
+      let cursor = cursors.get(bp) ?? 0
+
+      // この部位の未使用種目を探す
+      while (cursor < list.length && usedIds.has(list[cursor].id)) {
+        cursor++
+      }
+
+      if (cursor < list.length) {
+        selected.push(list[cursor])
+        usedIds.add(list[cursor].id)
+        cursors.set(bp, cursor + 1)
+        pickedThisRound = true
+      } else {
+        cursors.set(bp, list.length)
+      }
     }
+
+    // 全部位枯渇 → 終了
+    if (!pickedThisRound) break
   }
 
   // セット配分: 余りを最初の種目に積む

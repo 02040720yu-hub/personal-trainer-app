@@ -52,12 +52,12 @@ const BODY_PART_LABELS: Record<BodyPart, string> = {
   biceps: '二頭筋', triceps: '三頭筋', core: 'コア',
 }
 
-type ToningPreset = 'full' | 'lower' | 'arms' | 'custom'
+type ToningPreset = 'full' | 'lower' | 'upper' | 'custom'
 
 const TONING_PRESET_OPTIONS: { value: Exclude<ToningPreset, 'custom'>; label: string; emoji: string; desc: string; bodyParts: BodyPart[] }[] = [
-  { value: 'full',  label: '全身引き締め', emoji: '✨', desc: '脚・三頭筋・肩・コア', bodyParts: ['legs', 'triceps', 'shoulders', 'core'] },
-  { value: 'lower', label: '下半身・お尻', emoji: '🍑', desc: '脚・コア', bodyParts: ['legs', 'core'] },
-  { value: 'arms',  label: '二の腕・肩',  emoji: '🦾', desc: '三頭筋・肩・コア', bodyParts: ['triceps', 'shoulders', 'core'] },
+  { value: 'full',  label: '全身引き締め',     emoji: '✨', desc: '脚・背中・肩・コア',   bodyParts: ['legs', 'back', 'shoulders', 'core'] },
+  { value: 'lower', label: '下半身・お尻',     emoji: '🍑', desc: '脚・コア',             bodyParts: ['legs', 'core'] },
+  { value: 'upper', label: '姿勢改善・二の腕', emoji: '🪞', desc: '背中・肩・三頭筋',     bodyParts: ['back', 'shoulders', 'triceps'] },
 ]
 
 // 曜日ベースの自動フォーカス（ユーザーが詳細を開かなかった場合に毎日違うメニューを提示）
@@ -70,14 +70,16 @@ const HYPERTROPHY_DAILY_FOCUS: Record<number, Exclude<Focus, 'custom'>> = {
   5: 'full',  // 金
   6: 'upper', // 土
 }
+// 引き締めコースの曜日別自動プリセット
+// 下半身重視で女性ユーザーの最大ニーズに応えつつ、上半身は姿勢改善目的で週2回
 const TONING_DAILY_PRESET: Record<number, Exclude<ToningPreset, 'custom'>> = {
-  0: 'full',  // 日
-  1: 'lower', // 月
-  2: 'arms',  // 火
-  3: 'lower', // 水（ヒップ重視）
-  4: 'full',  // 木
-  5: 'lower', // 金
-  6: 'arms',  // 土
+  0: 'full',  // 日: 全身引き締め
+  1: 'lower', // 月: 下半身・お尻
+  2: 'upper', // 火: 姿勢改善・二の腕
+  3: 'lower', // 水: 下半身・お尻（週2回目）
+  4: 'full',  // 木: 全身引き締め
+  5: 'upper', // 金: 姿勢改善・二の腕
+  6: 'lower', // 土: 下半身・お尻
 }
 function getTodayHypertrophyFocus(): Exclude<Focus, 'custom'> {
   return HYPERTROPHY_DAILY_FOCUS[new Date().getDay()]

@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import type { Exercise, UserProfile, WorkoutRecord } from '../types'
 import { calcCapacity, buildQuickWorkoutPlan, getBodyPartsForFocus } from './quickWorkout'
+import { EXERCISES as PROD_EXERCISES } from '../data/exercises'
 
 // ── テスト用ヘルパー ──────────────────────────────────────────────────────────
 
@@ -398,5 +399,96 @@ describe('buildQuickWorkoutPlan - course / experienceLevel フィルタ (Phase 3
       const hasHip = plan.exercises.some(p => HIP_IDS.includes(p.exercise.id))
       expect(hasHip, `seed=${seed} でヒップ系種目が含まれない`).toBe(true)
     }
+  })
+})
+
+// ── Phase 6: ラウンドロビン部位均等配分 ────────────────────────────────────────
+
+describe('buildQuickWorkoutPlan: 部位均等配分 (Phase 6)', () => {
+  // Phase 6 テストは実プロダクト種目で挙動を検証するため、ローカルではなく
+  // import した EXERCISES（src/data/exercises.ts）を使う
+  const FEMALE_BEGINNER: UserProfile = {
+    height: 158, weight: 52, gender: 'female',
+    defaultCourse: 'toning', experienceLevel: 'beginner', defaultMinutes: 45,
+  }
+
+  it('複数部位プリセットでは各部位から最低1種目選ばれる', () => {
+    const plan = buildQuickWorkoutPlan({
+      minutes: 45,
+      focus: 'custom',
+      customBodyParts: ['legs', 'back', 'shoulders', 'core'],
+      courseType: 'toning',
+      experienceLevel: 'beginner',
+      profile: FEMALE_BEGINNER,
+      records: [],
+      exercises: PROD_EXERCISES,
+      seed: 42,
+    })
+
+    // 4種目枠 = 4部位 → 各部位から1つずつ取れているはず
+    const selectedBodyParts = new Set(plan.exercises.map(e => e.exercise.bodyPart))
+    expect(selectedBodyParts.size).toBe(4)
+    expect(selectedBodyParts.has('legs')).toBe(true)
+    expect(selectedBodyParts.has('back')).toBe(true)
+    expect(selectedBodyParts.has('shoulders')).toBe(true)
+    expect(selectedBodyParts.has('core')).toBe(true)
+  })
+
+  it('引き締め+脚部位のとき、ヒップ系種目が先頭に来る', () => {
+    const plan = buildQuickWorkoutPlan({
+      minutes: 30,
+      focus: 'custom',
+      customBodyParts: ['legs'],
+      courseType: 'toning',
+      experienceLevel: 'beginner',
+      profile: FEMALE_BEGINNER,
+      records: [],
+      exercises: PROD_EXERCISES,
+      seed: 42,
+    })
+
+    const firstExerciseId = plan.exercises[0]?.exercise.id
+    expect([
+      'hip-thrust', 'hip-abduction', 'glute-bridge',
+      'kickback', 'romanian-deadlift', 'bulgarian-split-squat',
+    ]).toContain(firstExerciseId)
+  })
+
+  it('引き締めコース「全身引き締め」プリセットで背中種目が含まれる', () => {
+    const plan = buildQuickWorkoutPlan({
+      minutes: 45,
+      focus: 'custom',
+      customBodyParts: ['legs', 'back', 'shoulders', 'core'],
+      courseType: 'toning',
+      experienceLevel: 'beginner',
+      profile: FEMALE_BEGINNER,
+      records: [],
+      exercises: PROD_EXERCISES,
+      seed: 42,
+    })
+
+    expect(plan.exercises.some(e => e.exercise.bodyPart === 'back')).toBe(true)
+  })
+
+  it('exerciseCount > 部位数 のとき、ラウンドロビンで複数部位が均等に取られる', () => {
+    // 90分 → 8種目（calcCapacity 上限）。legs/core 2部位なので、ラウンドロビンで
+    // legs だけで埋め尽くさず core も 1 種目以上取られる
+    const plan = buildQuickWorkoutPlan({
+      minutes: 90,
+      focus: 'custom',
+      customBodyParts: ['legs', 'core'],
+      courseType: 'toning',
+      experienceLevel: 'beginner',
+      profile: FEMALE_BEGINNER,
+      records: [],
+      exercises: PROD_EXERCISES,
+      seed: 42,
+    })
+
+    const legsCount = plan.exercises.filter(e => e.exercise.bodyPart === 'legs').length
+    const coreCount = plan.exercises.filter(e => e.exercise.bodyPart === 'core').length
+    expect(legsCount).toBeGreaterThanOrEqual(1)
+    expect(coreCount).toBeGreaterThanOrEqual(1)
+    expect(legsCount + coreCount).toBe(plan.exercises.length)
   })
 })
