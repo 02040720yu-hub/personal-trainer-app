@@ -16,10 +16,12 @@ import { getProfile, getAllRecords, saveRecord } from '../lib/storage'
 import {
   buildQuickWorkoutPlan,
   calcCapacity,
+  recommendTodaysFocus,
   type CourseType,
   type Focus,
   type PlannedExercise,
   type QuickWorkoutPlan,
+  type TodaysRecommendation,
 } from '../lib/quickWorkout'
 import { getBest1RM, calcNextTarget } from '../lib/calculations'
 import { checkPR } from '../lib/analytics'
@@ -60,32 +62,12 @@ const TONING_PRESET_OPTIONS: { value: Exclude<ToningPreset, 'custom'>; label: st
   { value: 'upper', label: '姿勢改善・二の腕', emoji: '🪞', desc: '背中・肩・三頭筋',     bodyParts: ['back', 'shoulders', 'triceps'] },
 ]
 
-// 曜日ベースの自動フォーカス（ユーザーが詳細を開かなかった場合に毎日違うメニューを提示）
-const HYPERTROPHY_DAILY_FOCUS: Record<number, Exclude<Focus, 'custom'>> = {
-  0: 'full',  // 日
-  1: 'upper', // 月
-  2: 'lower', // 火
-  3: 'upper', // 水
-  4: 'lower', // 木
-  5: 'full',  // 金
-  6: 'upper', // 土
+// 推薦結果の TodaysRecommendation から、コース別フォーカスのフォールバック値を取り出す
+function focusFromRecommendation(rec: TodaysRecommendation): Exclude<Focus, 'custom'> {
+  return rec.hypertrophyFocus ?? 'full'
 }
-// 引き締めコースの曜日別自動プリセット
-// 下半身重視で女性ユーザーの最大ニーズに応えつつ、上半身は姿勢改善目的で週2回
-const TONING_DAILY_PRESET: Record<number, Exclude<ToningPreset, 'custom'>> = {
-  0: 'full',  // 日: 全身引き締め
-  1: 'lower', // 月: 下半身・お尻
-  2: 'upper', // 火: 姿勢改善・二の腕
-  3: 'lower', // 水: 下半身・お尻（週2回目）
-  4: 'full',  // 木: 全身引き締め
-  5: 'upper', // 金: 姿勢改善・二の腕
-  6: 'lower', // 土: 下半身・お尻
-}
-function getTodayHypertrophyFocus(): Exclude<Focus, 'custom'> {
-  return HYPERTROPHY_DAILY_FOCUS[new Date().getDay()]
-}
-function getTodayToningPreset(): Exclude<ToningPreset, 'custom'> {
-  return TONING_DAILY_PRESET[new Date().getDay()]
+function presetFromRecommendation(rec: TodaysRecommendation): Exclude<ToningPreset, 'custom'> {
+  return rec.toningPreset ?? 'full'
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -116,7 +98,7 @@ type Step = 'select' | 'plan' | 'record' | 'summary'
 
 export default function QuickWorkout({ onOpenDashboard, onOpenHeatmap, onOpenHistory, onOpenSettings, onOpenTitle }: Props) {
   const [step, setStep] = useState<Step>('select')
-  // 初期値はプロファイル + 曜日ベースの自動ローテーション
+  // 初期値はプロファイル + 履歴ベースの推薦
   const [minutes, setMinutes] = useState<Minutes>(() => {
     const p = getProfile()
     return (p?.defaultMinutes ?? 45) as Minutes
@@ -125,8 +107,14 @@ export default function QuickWorkout({ onOpenDashboard, onOpenHeatmap, onOpenHis
     const p = getProfile()
     return p?.defaultCourse ?? 'hypertrophy'
   })
-  const [focus, setFocus] = useState<Focus>(() => getTodayHypertrophyFocus())
-  const [toningPreset, setToningPreset] = useState<ToningPreset>(() => getTodayToningPreset())
+  const [recommendation, setRecommendation] = useState<TodaysRecommendation>(() => {
+    const records = getAllRecords()
+    const p = getProfile()
+    const initialCourse = p?.defaultCourse ?? 'hypertrophy'
+    return recommendTodaysFocus(records, initialCourse)
+  })
+  const [focus, setFocus] = useState<Focus>(() => focusFromRecommendation(recommendation))
+  const [toningPreset, setToningPreset] = useState<ToningPreset>(() => presetFromRecommendation(recommendation))
   const [customBodyParts, setCustomBodyParts] = useState<BodyPart[]>([])
   const [plan, setPlan] = useState<QuickWorkoutPlan | null>(null)
   const [currentIndex, setCurrentIndex] = useState(0)
@@ -136,13 +124,16 @@ export default function QuickWorkout({ onOpenDashboard, onOpenHeatmap, onOpenHis
     setFocus(f)
   }, [])
 
-  // コース切り替え時は、その日の自動推奨に再リセット（ユーザーが詳細パネルで再変更可能）
+  // コース切り替え時は履歴ベースで推薦を再計算する
   const handleCourseTypeChange = useCallback((c: CourseType) => {
     setCourseType(c)
+    const records = getAllRecords()
+    const newRec = recommendTodaysFocus(records, c)
+    setRecommendation(newRec)
     if (c === 'toning') {
-      setToningPreset(getTodayToningPreset())
+      setToningPreset(presetFromRecommendation(newRec))
     } else {
-      setFocus(getTodayHypertrophyFocus())
+      setFocus(focusFromRecommendation(newRec))
     }
   }, [])
 
@@ -277,6 +268,7 @@ export default function QuickWorkout({ onOpenDashboard, onOpenHeatmap, onOpenHis
             courseType={courseType}
             toningPreset={toningPreset}
             canGenerate={canGenerate}
+            recommendation={recommendation}
             onMinutesChange={setMinutes}
             onFocusChange={handleFocusChange}
             onCustomBodyPartsChange={setCustomBodyParts}
@@ -325,7 +317,7 @@ export default function QuickWorkout({ onOpenDashboard, onOpenHeatmap, onOpenHis
 // ─────────────────────────────────────────────────────────────────────────────
 
 function SelectStep({
-  minutes, focus, customBodyParts, courseType, toningPreset, canGenerate,
+  minutes, focus, customBodyParts, courseType, toningPreset, canGenerate, recommendation,
   onMinutesChange, onFocusChange, onCustomBodyPartsChange,
   onCourseTypeChange, onToningPresetChange, onGenerate,
   onOpenDashboard, onOpenHeatmap, onOpenHistory, onOpenTitle,
@@ -336,6 +328,7 @@ function SelectStep({
   courseType: CourseType
   toningPreset: ToningPreset
   canGenerate: boolean
+  recommendation: TodaysRecommendation
   onMinutesChange: (m: Minutes) => void
   onFocusChange: (f: Focus) => void
   onCustomBodyPartsChange: (parts: BodyPart[]) => void
@@ -399,6 +392,11 @@ function SelectStep({
         <p className="text-sm text-white/90 mt-1 tabular-nums">
           {minutes}分 ・ {focusLabel} ・ {exerciseCount}種目（{totalSets}セット）
         </p>
+        {recommendation.reason && (
+          <p className="text-xs text-white/85 mt-2.5 leading-relaxed border-t border-white/20 pt-2.5">
+            {recommendation.reason}
+          </p>
+        )}
       </div>
 
       {/* スタートボタン */}

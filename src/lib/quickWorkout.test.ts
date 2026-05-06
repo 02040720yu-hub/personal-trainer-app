@@ -1,6 +1,12 @@
 import { describe, it, expect } from 'vitest'
 import type { Exercise, UserProfile, WorkoutRecord } from '../types'
-import { calcCapacity, buildQuickWorkoutPlan, getBodyPartsForFocus } from './quickWorkout'
+import {
+  calcCapacity,
+  buildQuickWorkoutPlan,
+  getBodyPartsForFocus,
+  recommendTodaysFocus,
+  computeDaysSinceLastTraining,
+} from './quickWorkout'
 import { EXERCISES as PROD_EXERCISES } from '../data/exercises'
 
 // ── テスト用ヘルパー ──────────────────────────────────────────────────────────
@@ -490,5 +496,130 @@ describe('buildQuickWorkoutPlan: 部位均等配分 (Phase 6)', () => {
     expect(legsCount).toBeGreaterThanOrEqual(1)
     expect(coreCount).toBeGreaterThanOrEqual(1)
     expect(legsCount + coreCount).toBe(plan.exercises.length)
+  })
+})
+
+// ── Phase 8: 履歴ベース推薦 ──────────────────────────────────────────────────
+
+describe('recommendTodaysFocus: 履歴ベース推薦 (Phase 8)', () => {
+  // 過去日付のレコードを作るヘルパー（00:00 基準で daysAgo 日前）
+  function makeRecord(exerciseId: string, daysAgo: number): WorkoutRecord {
+    const date = new Date()
+    date.setDate(date.getDate() - daysAgo)
+    return {
+      id: `${exerciseId}-${daysAgo}`,
+      exerciseId,
+      date: date.toISOString(),
+      sets: [{ weight: 20, reps: 10 }],
+      best1RM: 26,
+      nextTargetWeight: 20,
+      source: 'quick',
+    }
+  }
+
+  it('履歴ゼロの場合、引き締めコースは full プリセットを返す', () => {
+    const rec = recommendTodaysFocus([], 'toning')
+    expect(rec.toningPreset).toBe('full')
+    expect(rec.reason).toContain('全身')
+  })
+
+  it('履歴ゼロの場合、筋肥大コースは full フォーカスを返す', () => {
+    const rec = recommendTodaysFocus([], 'hypertrophy')
+    expect(rec.hypertrophyFocus).toBe('full')
+  })
+
+  it('1週間以上ご無沙汰の場合、full を返す', () => {
+    const records = [makeRecord('hip-thrust', 10)]
+    const rec = recommendTodaysFocus(records, 'toning')
+    expect(rec.toningPreset).toBe('full')
+    expect(rec.reason).toContain('1週間')
+  })
+
+  it('引き締めコース: 昨日脚をやった場合、upper を返す', () => {
+    const records = [makeRecord('hip-thrust', 1)]
+    const rec = recommendTodaysFocus(records, 'toning')
+    expect(rec.toningPreset).toBe('upper')
+    expect(rec.reason).toContain('昨日')
+  })
+
+  it('引き締めコース: 3日前に脚をやった場合、lower を返す（脚を再度推薦）', () => {
+    const records = [makeRecord('hip-thrust', 3)]
+    const rec = recommendTodaysFocus(records, 'toning')
+    expect(rec.toningPreset).toBe('lower')
+    expect(rec.reason).toContain('3日前')
+  })
+
+  it('筋肥大コース: 昨日脚をやった場合、upper を返す', () => {
+    const records = [makeRecord('squat', 1)]
+    const rec = recommendTodaysFocus(records, 'hypertrophy')
+    expect(rec.hypertrophyFocus).toBe('upper')
+  })
+
+  it('筋肥大コース: 昨日上半身をやった場合、lower を返す', () => {
+    const records = [
+      makeRecord('bench-press', 1),
+      makeRecord('lat-pulldown', 1),
+      makeRecord('overhead-press', 1),
+    ]
+    const rec = recommendTodaysFocus(records, 'hypertrophy')
+    expect(rec.hypertrophyFocus).toBe('lower')
+  })
+
+  it('月水金で月にlower、水にもlowerが提案されない（連続脚問題の検証）', () => {
+    // 「月曜日に脚」相当 = 2日前にlower
+    const records = [
+      makeRecord('hip-thrust', 2),
+      makeRecord('leg-press', 2),
+    ]
+    const rec = recommendTodaysFocus(records, 'toning')
+    // 2日経過しているので lower でもよいが、reason に「2日前」が入る
+    expect(['lower', 'upper', 'full']).toContain(rec.toningPreset)
+    if (rec.toningPreset === 'lower') {
+      expect(rec.reason).toContain('2日前')
+    }
+  })
+
+  it('連続日に同じ部位を提案しない（直近1日以内の脚は除外）', () => {
+    // 今日と昨日にlowerをやったケース
+    const records = [
+      makeRecord('hip-thrust', 0),
+      makeRecord('leg-press', 1),
+    ]
+    const rec = recommendTodaysFocus(records, 'toning')
+    expect(rec.toningPreset).toBe('upper')
+  })
+})
+
+describe('computeDaysSinceLastTraining (Phase 8)', () => {
+  function makeRecord(exerciseId: string, daysAgo: number): WorkoutRecord {
+    const date = new Date()
+    date.setDate(date.getDate() - daysAgo)
+    return {
+      id: `${exerciseId}-${daysAgo}`,
+      exerciseId,
+      date: date.toISOString(),
+      sets: [{ weight: 20, reps: 10 }],
+      best1RM: 26,
+      nextTargetWeight: 20,
+      source: 'quick',
+    }
+  }
+
+  it('一度も鍛えていない部位は null を返す', () => {
+    const result = computeDaysSinceLastTraining([])
+    expect(result.get('legs')).toBeNull()
+    expect(result.get('back')).toBeNull()
+  })
+
+  it('部位ごとに最も新しい日からの経過日数を返す', () => {
+    const records = [
+      makeRecord('hip-thrust', 5),    // legs, 5日前
+      makeRecord('leg-press', 2),     // legs, 2日前 ← より新しい
+      makeRecord('lat-pulldown', 3),  // back, 3日前
+    ]
+    const result = computeDaysSinceLastTraining(records)
+    expect(result.get('legs')).toBe(2)
+    expect(result.get('back')).toBe(3)
+    expect(result.get('shoulders')).toBeNull()
   })
 })

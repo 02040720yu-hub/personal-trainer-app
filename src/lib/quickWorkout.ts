@@ -8,6 +8,7 @@ import {
   calculateInitialTargetWeightForExercise,
   roundToNearestPlate,
 } from './calculations'
+import { EXERCISES } from '../data/exercises'
 
 export type Focus = 'full' | 'upper' | 'lower' | 'custom'
 export type CourseType = 'hypertrophy' | 'toning'
@@ -314,4 +315,184 @@ export function buildQuickWorkoutPlan(params: {
     totalSets,
     restSecondsPerSet,
   }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// recommendTodaysFocus: 履歴ベースの今日の推薦
+// ─────────────────────────────────────────────────────────────────────────────
+
+export interface TodaysRecommendation {
+  /** 引き締めコース時のプリセット */
+  toningPreset?: 'full' | 'lower' | 'upper'
+  /** 筋肥大コース時のフォーカス */
+  hypertrophyFocus?: 'full' | 'upper' | 'lower'
+  /** 推薦根拠を表示する文言（20〜40字程度） */
+  reason: string
+}
+
+const ALL_BODY_PARTS: BodyPart[] = [
+  'chest', 'back', 'legs', 'shoulders', 'biceps', 'triceps', 'core',
+]
+
+/**
+ * 各部位について、最後にトレーニングしてからの経過日数を返す。
+ * 一度も鍛えていない部位は null。
+ */
+export function computeDaysSinceLastTraining(
+  records: WorkoutRecord[],
+  now: Date = new Date(),
+): Map<BodyPart, number | null> {
+  const result = new Map<BodyPart, number | null>(
+    ALL_BODY_PARTS.map(bp => [bp, null])
+  )
+
+  // 種目ID → 部位 のマップ（hidden 種目もカバー: data 側の ALL_EXERCISES でなく
+  // 公開 EXERCISES で十分。過去レコードに hidden 種目があった場合は無視される）
+  const exerciseToBp = new Map<string, BodyPart>(
+    EXERCISES.map(e => [e.id, e.bodyPart])
+  )
+
+  // 各部位の最新レコード日を求める
+  const lastDateByBp = new Map<BodyPart, Date>()
+  for (const r of records) {
+    const bp = exerciseToBp.get(r.exerciseId)
+    if (!bp) continue
+    const recordDate = new Date(r.date)
+    const current = lastDateByBp.get(bp)
+    if (!current || recordDate > current) {
+      lastDateByBp.set(bp, recordDate)
+    }
+  }
+
+  // 経過日数（floor）に変換
+  for (const [bp, lastDate] of lastDateByBp) {
+    const diffMs = now.getTime() - lastDate.getTime()
+    const diffDays = Math.floor(diffMs / (24 * 60 * 60 * 1000))
+    result.set(bp, diffDays)
+  }
+
+  return result
+}
+
+/** 「◯日前」表記。0/1日前は「昨日」と表記（今日のセッションも実質昨日扱い）。 */
+function formatDaysAgo(days: number): string {
+  return days <= 1 ? '昨日' : `${days}日前`
+}
+
+/**
+ * 履歴とコースから、今日の推薦フォーカスを決定する。
+ *
+ * ロジック:
+ *  1. 履歴ゼロ → コース別の full をデフォルト
+ *  2. 直近1週間に1件もなし → full（再開促進）
+ *  3. 直近1日以内（=今日/昨日）に鍛えた部位は避ける
+ *  4. 引き締めコース: 脚を強めにバイアス
+ *  5. 筋肥大コース: 部位バランスを優先
+ */
+export function recommendTodaysFocus(
+  records: WorkoutRecord[],
+  course: CourseType,
+  now: Date = new Date(),
+): TodaysRecommendation {
+  // 1. 履歴ゼロ
+  if (records.length === 0) {
+    if (course === 'toning') {
+      return { toningPreset: 'full', reason: 'まずは全身バランスから始めましょう' }
+    }
+    return { hypertrophyFocus: 'full', reason: 'まずは全身バランスから始めましょう' }
+  }
+
+  // 2. 直近1週間に何もなし
+  const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
+  const recentRecords = records.filter(r => new Date(r.date) >= sevenDaysAgo)
+  if (recentRecords.length === 0) {
+    if (course === 'toning') {
+      return { toningPreset: 'full', reason: '前回から1週間ぶり。全身バランスで再開しましょう' }
+    }
+    return { hypertrophyFocus: 'full', reason: '前回から1週間ぶり。全身バランスで再開しましょう' }
+  }
+
+  const daysSince = computeDaysSinceLastTraining(records, now)
+
+  if (course === 'toning') {
+    return recommendForToning(daysSince)
+  }
+  return recommendForHypertrophy(daysSince)
+}
+
+function recommendForToning(
+  daysSince: Map<BodyPart, number | null>,
+): TodaysRecommendation {
+  const legsDays = daysSince.get('legs') ?? null
+  const isLegsRecent = legsDays !== null && legsDays <= 1
+
+  // 脚が直近（0/1日前）→ 上半身でリカバリー
+  if (isLegsRecent) {
+    return {
+      toningPreset: 'upper',
+      reason: `${formatDaysAgo(legsDays!)}は脚でした。今日は背中・肩・二の腕を`,
+    }
+  }
+
+  // 脚が一度もない → まず脚から（引き締めバイアス）
+  if (legsDays === null) {
+    return { toningPreset: 'lower', reason: 'まずはお尻・脚から始めましょう' }
+  }
+
+  // 脚から2日以上経過 → 脚を再度推薦
+  if (legsDays >= 2) {
+    return {
+      toningPreset: 'lower',
+      reason: `${legsDays}日前に脚を鍛えました。お尻・脚を中心に`,
+    }
+  }
+
+  // フォールバック（基本ここに来ない）
+  return { toningPreset: 'full', reason: 'バランスよく全身を鍛えましょう' }
+}
+
+function recommendForHypertrophy(
+  daysSince: Map<BodyPart, number | null>,
+): TodaysRecommendation {
+  const legsDays = daysSince.get('legs') ?? null
+  const isLegsRecent = legsDays !== null && legsDays <= 1
+
+  const upperBodyParts: BodyPart[] = ['back', 'chest', 'shoulders']
+  const upperDays = upperBodyParts.map(bp => daysSince.get(bp) ?? null)
+  const isUpperRecent = upperDays.every(d => d !== null && d <= 1)
+
+  // 脚が直近 && 上半身は問題なし → 上半身
+  if (isLegsRecent && !isUpperRecent) {
+    return {
+      hypertrophyFocus: 'upper',
+      reason: `${formatDaysAgo(legsDays!)}は脚でした。今日は上半身を`,
+    }
+  }
+
+  // 上半身が直近 && 脚は問題なし → 下半身
+  if (isUpperRecent && !isLegsRecent) {
+    const numericUpperDays = upperDays.filter((d): d is number => d !== null)
+    const oldestUpperDay = numericUpperDays.length > 0 ? Math.min(...numericUpperDays) : 1
+    return {
+      hypertrophyFocus: 'lower',
+      reason: `${formatDaysAgo(oldestUpperDay)}は上半身でした。今日は脚を`,
+    }
+  }
+
+  // 一度もやっていない部位がある場合、それを優先
+  const untrained: BodyPart[] = []
+  for (const [bp, days] of daysSince) {
+    if (days === null) untrained.push(bp)
+  }
+  if (untrained.length > 0) {
+    if (untrained.some(bp => upperBodyParts.includes(bp))) {
+      return { hypertrophyFocus: 'upper', reason: 'まだ鍛えていない部位を中心に' }
+    }
+    if (untrained.includes('legs')) {
+      return { hypertrophyFocus: 'lower', reason: 'まだ鍛えていない脚を中心に' }
+    }
+  }
+
+  // 全部位を直近2日以内にやっている等の特殊ケース → full
+  return { hypertrophyFocus: 'full', reason: 'バランスよく全身を鍛えましょう' }
 }
