@@ -3,7 +3,7 @@
  * 1RM・10RM 換算および初回目標重量の計算ロジック
  */
 
-import type { WorkoutRecord } from '../types'
+import type { Exercise, WorkoutRecord } from '../types'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Epley 式による 1RM 推定
@@ -128,6 +128,41 @@ const INITIAL_1RM_MULTIPLIERS: Record<string, Record<GenderKey, number>> = {
   'leg-extension':           { male: 0.38, female: 0.25 },
   'calf-raise':              { male: 0.80, female: 0.53 },
   'cable-crunch':            { male: 0.25, female: 0.17 },
+
+  // ── Phase 2 で追加した種目のマルチプライヤー ─────────────────────────────
+  // マシン胸
+  'machine-chest-press':     { male: 0.55, female: 0.35 },
+  'pec-fly-machine':         { male: 0.20, female: 0.13 },
+
+  // マシン背中
+  'assisted-pull-up':        { male: 0.50, female: 0.40 }, // アシスト重量(自重から引く)
+  'chest-supported-row':     { male: 0.45, female: 0.30 },
+  'machine-pullover':        { male: 0.30, female: 0.20 },
+
+  // ヒップ・脚
+  'hip-thrust':              { male: 1.20, female: 0.90 }, // ヒップスラストは女性も結構出る
+  'hip-abduction':           { male: 0.50, female: 0.45 }, // 女性のほうが得意な種目
+  'hip-adduction':           { male: 0.50, female: 0.45 },
+  'glute-bridge':            { male: 0.40, female: 0.30 }, // 自重始まり想定
+  'bulgarian-split-squat':   { male: 0.30, female: 0.20 }, // 片足、ダンベル重量
+  'goblet-squat':            { male: 0.40, female: 0.27 }, // ダンベル重量
+  'hack-squat':              { male: 1.00, female: 0.65 },
+  'kickback':                { male: 0.20, female: 0.17 }, // ケーブル重量
+
+  // マシン肩
+  'machine-shoulder-press':  { male: 0.40, female: 0.22 },
+  'rear-delt-fly':           { male: 0.18, female: 0.12 },
+  'cable-lateral-raise':     { male: 0.10, female: 0.07 },
+
+  // 腕
+  'cable-curl':              { male: 0.25, female: 0.15 },
+  'machine-curl':            { male: 0.25, female: 0.15 },
+  'rope-pushdown':           { male: 0.27, female: 0.17 },
+
+  // コア（アシスト/自重ベースなので低め）
+  'dead-bug':                { male: 0.10, female: 0.08 },
+  'bird-dog':                { male: 0.10, female: 0.08 },
+  'mountain-climber':        { male: 0.10, female: 0.08 },
 }
 
 // 定義されていない種目のデフォルトマルチプライヤー
@@ -148,7 +183,15 @@ export function calculateInitial1RM(
 }
 
 /**
+ * 初回セッションのディスカウント係数。
+ * 推定はあくまで一般化された値であり、初心者は怪我リスクを下げるため
+ * さらに 25% 軽い重量から開始させる。
+ */
+const FIRST_SESSION_DISCOUNT = 0.75
+
+/**
  * 初回目標重量（10RM 相当）を算出
+ * 初心者の怪我リスク低減のため FIRST_SESSION_DISCOUNT (0.75) を適用する。
  * @returns 2.5 kg 単位に丸めた目標重量（最小 2.5 kg）
  */
 export function calculateInitialTargetWeight(
@@ -158,6 +201,34 @@ export function calculateInitialTargetWeight(
   category: 'compound' | 'isolation',
 ): number {
   const initial1RM = calculateInitial1RM(exerciseId, bodyWeight, gender, category)
-  const target = calculate10RMTarget(initial1RM)
+  const target = calculate10RMTarget(initial1RM) * FIRST_SESSION_DISCOUNT
   return Math.max(roundToNearestPlate(target), 2.5)
+}
+
+/**
+ * Exercise オブジェクトを受け取って初回目標重量を算出する。
+ * バーベル種目はバー重量(20kg)を最小値として保証する。
+ *
+ * 内部的には `calculateInitialTargetWeight` を呼び出すため、
+ * 初回ディスカウント (0.75) も自動的に適用される。
+ */
+export function calculateInitialTargetWeightForExercise(
+  exercise: Exercise,
+  bodyWeight: number,
+  gender: GenderKey,
+): number {
+  const target = calculateInitialTargetWeight(
+    exercise.id,
+    bodyWeight,
+    gender,
+    exercise.category,
+  )
+
+  // バーベル種目はバー重量(20kg)を下回らないようにする
+  const isBarbell = exercise.equipment.includes('バーベル')
+  if (isBarbell && target < 20) {
+    return 20
+  }
+
+  return target
 }

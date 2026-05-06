@@ -60,6 +60,32 @@ const TONING_PRESET_OPTIONS: { value: Exclude<ToningPreset, 'custom'>; label: st
   { value: 'arms',  label: '二の腕・肩',  emoji: '🦾', desc: '三頭筋・肩・コア', bodyParts: ['triceps', 'shoulders', 'core'] },
 ]
 
+// 曜日ベースの自動フォーカス（ユーザーが詳細を開かなかった場合に毎日違うメニューを提示）
+const HYPERTROPHY_DAILY_FOCUS: Record<number, Exclude<Focus, 'custom'>> = {
+  0: 'full',  // 日
+  1: 'upper', // 月
+  2: 'lower', // 火
+  3: 'upper', // 水
+  4: 'lower', // 木
+  5: 'full',  // 金
+  6: 'upper', // 土
+}
+const TONING_DAILY_PRESET: Record<number, Exclude<ToningPreset, 'custom'>> = {
+  0: 'full',  // 日
+  1: 'lower', // 月
+  2: 'arms',  // 火
+  3: 'lower', // 水（ヒップ重視）
+  4: 'full',  // 木
+  5: 'lower', // 金
+  6: 'arms',  // 土
+}
+function getTodayHypertrophyFocus(): Exclude<Focus, 'custom'> {
+  return HYPERTROPHY_DAILY_FOCUS[new Date().getDay()]
+}
+function getTodayToningPreset(): Exclude<ToningPreset, 'custom'> {
+  return TONING_DAILY_PRESET[new Date().getDay()]
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // 型定義
 // ─────────────────────────────────────────────────────────────────────────────
@@ -87,17 +113,34 @@ type Step = 'select' | 'plan' | 'record' | 'summary'
 
 export default function QuickWorkout({ onOpenDashboard, onOpenHeatmap, onOpenSettings, onOpenTitle }: Props) {
   const [step, setStep] = useState<Step>('select')
-  const [minutes, setMinutes] = useState<Minutes>(45)
-  const [focus, setFocus] = useState<Focus>('full')
+  // 初期値はプロファイル + 曜日ベースの自動ローテーション
+  const [minutes, setMinutes] = useState<Minutes>(() => {
+    const p = getProfile()
+    return (p?.defaultMinutes ?? 45) as Minutes
+  })
+  const [courseType, setCourseType] = useState<CourseType>(() => {
+    const p = getProfile()
+    return p?.defaultCourse ?? 'hypertrophy'
+  })
+  const [focus, setFocus] = useState<Focus>(() => getTodayHypertrophyFocus())
+  const [toningPreset, setToningPreset] = useState<ToningPreset>(() => getTodayToningPreset())
   const [customBodyParts, setCustomBodyParts] = useState<BodyPart[]>([])
-  const [courseType, setCourseType] = useState<CourseType>('hypertrophy')
-  const [toningPreset, setToningPreset] = useState<ToningPreset>('full')
   const [plan, setPlan] = useState<QuickWorkoutPlan | null>(null)
   const [currentIndex, setCurrentIndex] = useState(0)
   const [recorded, setRecorded] = useState<RecordedExercise[]>([])
 
   const handleFocusChange = useCallback((f: Focus) => {
     setFocus(f)
+  }, [])
+
+  // コース切り替え時は、その日の自動推奨に再リセット（ユーザーが詳細パネルで再変更可能）
+  const handleCourseTypeChange = useCallback((c: CourseType) => {
+    setCourseType(c)
+    if (c === 'toning') {
+      setToningPreset(getTodayToningPreset())
+    } else {
+      setFocus(getTodayHypertrophyFocus())
+    }
   }, [])
 
   const canGenerate = courseType === 'toning'
@@ -129,6 +172,7 @@ export default function QuickWorkout({ onOpenDashboard, onOpenHeatmap, onOpenSet
       focus: activeFocus,
       customBodyParts: activeBodyParts,
       courseType,
+      experienceLevel: profile.experienceLevel,
       profile,
       records,
       exercises: EXERCISES,
@@ -233,7 +277,7 @@ export default function QuickWorkout({ onOpenDashboard, onOpenHeatmap, onOpenSet
             onMinutesChange={setMinutes}
             onFocusChange={handleFocusChange}
             onCustomBodyPartsChange={setCustomBodyParts}
-            onCourseTypeChange={setCourseType}
+            onCourseTypeChange={handleCourseTypeChange}
             onToningPresetChange={setToningPreset}
             onGenerate={handleGenerate}
             onOpenDashboard={onOpenDashboard}
@@ -297,6 +341,7 @@ function SelectStep({
   onOpenHeatmap: () => void
   onOpenTitle: () => void
 }) {
+  const [detailsOpen, setDetailsOpen] = useState(false)
   const { exerciseCount, totalSets } = calcCapacity(minutes)
   const isCustom = focus === 'custom'
   const isToning = courseType === 'toning'
@@ -309,14 +354,80 @@ function SelectStep({
     }
   }
 
+  // おすすめカード用のフォーカスラベル
+  const focusLabel = (() => {
+    if (isToning) {
+      if (toningPreset === 'custom') {
+        return customBodyParts.length > 0
+          ? customBodyParts.map(bp => BODY_PART_LABELS[bp]).join('・')
+          : '部位未選択'
+      }
+      return TONING_PRESET_OPTIONS.find(o => o.value === toningPreset)?.label ?? toningPreset
+    }
+    if (focus === 'custom') {
+      return customBodyParts.length > 0
+        ? customBodyParts.map(bp => BODY_PART_LABELS[bp]).join('・')
+        : '部位未選択'
+    }
+    return FOCUS_OPTIONS.find(o => o.value === focus)?.label ?? focus
+  })()
+
   const accentActive   = isToning ? 'bg-rose-500 text-white shadow-md shadow-rose-500/25' : 'bg-cyan-500 text-white shadow-md shadow-cyan-500/25'
   const accentRing     = isToning ? 'focus-visible:ring-rose-500' : 'focus-visible:ring-cyan-500'
-  const generateBtnOn  = isToning
+  const startBtnOn     = isToning
     ? 'bg-rose-500 text-white shadow-lg shadow-rose-500/25 active:scale-[0.98] hover:bg-rose-600'
     : 'bg-gradient-to-r from-cyan-500 to-blue-600 text-white shadow-lg shadow-cyan-500/25 active:scale-[0.98] hover:from-cyan-400 hover:to-blue-500'
 
   return (
     <div className="px-4 py-5 space-y-6">
+
+      {/* 今日のおすすめカード */}
+      <div className={`rounded-3xl p-5 text-white shadow-lg
+        ${isToning
+          ? 'bg-gradient-to-br from-rose-500 to-pink-500 shadow-rose-500/25'
+          : 'bg-gradient-to-br from-cyan-600 to-blue-600 shadow-cyan-500/25'}`}>
+        <p className="text-[10px] font-bold uppercase tracking-widest text-white/80">今日のおすすめ</p>
+        <p className="text-xl font-bold mt-1.5">
+          {isToning ? '引き締めコース' : '筋肥大コース'}
+        </p>
+        <p className="text-sm text-white/90 mt-1 tabular-nums">
+          {minutes}分 ・ {focusLabel} ・ {exerciseCount}種目（{totalSets}セット）
+        </p>
+      </div>
+
+      {/* スタートボタン */}
+      <button
+        type="button"
+        onClick={onGenerate}
+        disabled={!canGenerate}
+        className={`w-full h-16 rounded-2xl text-lg font-bold transition-all
+          focus-visible:outline-none focus-visible:ring-2 ${accentRing} focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950
+          ${canGenerate ? startBtnOn : 'bg-slate-800 text-slate-600 cursor-not-allowed border border-white/5'}`}
+      >
+        スタート
+      </button>
+
+      {/* 詳細を変更する（折りたたみ） */}
+      <div>
+        <button
+          type="button"
+          onClick={() => setDetailsOpen(o => !o)}
+          aria-expanded={detailsOpen}
+          aria-controls="quickworkout-details"
+          className="w-full flex items-center justify-center gap-2 text-sm font-semibold text-slate-400
+            hover:text-slate-200 active:scale-[0.98] py-2.5 rounded-xl transition-all
+            focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500"
+        >
+          詳細を変更する
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none"
+            className={`transition-transform ${detailsOpen ? 'rotate-180' : ''}`} aria-hidden="true">
+            <path d="M3 5l4 4 4-4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+          </svg>
+        </button>
+      </div>
+
+      {detailsOpen && (
+      <div id="quickworkout-details" className="space-y-6">
 
       {/* コース切り替えタブ */}
       <div className="flex bg-slate-900 rounded-2xl p-1 gap-1 border border-white/10">
@@ -581,6 +692,9 @@ function SelectStep({
         </section>
       )}
 
+      </div>
+      )}
+
       {/* 記録を見る */}
       <section>
         <p className="label-xs mb-2">記録を見る</p>
@@ -607,31 +721,6 @@ function SelectStep({
           </button>
         </div>
       </section>
-
-      {/* プレビュー */}
-      <div className="bg-slate-900 rounded-2xl border border-white/10 px-4 py-3">
-        <p className="text-xs text-slate-400">予定</p>
-        <p className="text-white font-bold mt-1 tabular-nums">
-          <span className={`text-2xl ${isToning ? 'text-rose-400' : 'text-cyan-400'}`}>{exerciseCount}</span>
-          <span className="text-sm ml-1">種目</span>
-          <span className="mx-2 text-slate-700">·</span>
-          <span className={`text-2xl ${isToning ? 'text-rose-400' : 'text-cyan-400'}`}>{totalSets}</span>
-          <span className="text-sm ml-1">セット</span>
-          {isToning && <span className="text-xs text-rose-400/70 ml-2 font-normal">10回×1RM80%</span>}
-        </p>
-      </div>
-
-      {/* プラン生成ボタン */}
-      <button
-        type="button"
-        onClick={onGenerate}
-        disabled={!canGenerate}
-        className={`w-full h-14 rounded-2xl text-base font-bold transition-all
-          focus-visible:outline-none focus-visible:ring-2 ${accentRing} focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950
-          ${canGenerate ? generateBtnOn : 'bg-slate-800 text-slate-600 cursor-not-allowed border border-white/5'}`}
-      >
-        {isToning ? 'プランを作成（引き締め）' : 'プランを作成'}
-      </button>
 
       {/* タイトルへ戻る */}
       <div className="flex justify-center pb-2">
@@ -763,6 +852,7 @@ function RecordStep({
   )
   const [allBodyweight, setAllBodyweight] = useState(false)
   const [saving, setSaving] = useState(false)
+  const [showTips, setShowTips] = useState(false)
 
   const toggleAllBodyweight = () => {
     const next = !allBodyweight
@@ -857,6 +947,85 @@ function RecordStep({
             )}
           </div>
         </div>
+      </div>
+
+      {/* フォームのコツ（折りたたみ） */}
+      <div>
+        <button
+          type="button"
+          onClick={() => setShowTips(s => !s)}
+          aria-expanded={showTips}
+          aria-controls="exercise-tips"
+          className="w-full flex items-center justify-between bg-slate-900 border border-white/10
+            rounded-xl px-4 py-3 text-sm font-semibold text-slate-300
+            hover:border-white/20 active:scale-[0.98] transition-all
+            focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500"
+        >
+          <span className="flex items-center gap-2">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+              <circle cx="8" cy="8" r="6" stroke="currentColor" strokeWidth="1.5"/>
+              <path d="M8 5v3.5M8 11v.01" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+            </svg>
+            フォームのコツを見る
+          </span>
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none"
+            className={`transition-transform ${showTips ? 'rotate-180' : ''}`} aria-hidden="true">
+            <path d="M3 5l4 4 4-4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+          </svg>
+        </button>
+
+        {showTips && (
+          <div id="exercise-tips" className="mt-2 bg-slate-900 border border-white/10 rounded-xl px-4 py-4 space-y-4">
+            {/* 種目の説明 */}
+            <p className="text-sm text-slate-200 leading-relaxed">
+              {planned.exercise.description}
+            </p>
+
+            {/* セットアップ */}
+            {planned.exercise.setupTips && planned.exercise.setupTips.length > 0 && (
+              <div>
+                <p className="text-[10px] uppercase tracking-wider font-bold text-cyan-400 mb-1.5">
+                  セットアップ
+                </p>
+                <ul className="space-y-1">
+                  {planned.exercise.setupTips.map((tip, i) => (
+                    <li key={i} className="flex gap-2 text-xs text-slate-300 leading-relaxed">
+                      <span className="text-cyan-400 shrink-0">•</span>
+                      <span>{tip}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            {/* 注意点（よくある間違い） */}
+            {planned.exercise.commonMistakes && planned.exercise.commonMistakes.length > 0 && (
+              <div>
+                <p className="text-[10px] uppercase tracking-wider font-bold text-amber-400 mb-1.5">
+                  注意点
+                </p>
+                <ul className="space-y-1">
+                  {planned.exercise.commonMistakes.map((m, i) => (
+                    <li key={i} className="flex gap-2 text-xs text-slate-300 leading-relaxed">
+                      <span className="text-amber-400 shrink-0">•</span>
+                      <span>{m}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            {/* 怪我リスクの警告 */}
+            {planned.exercise.cautionFlag && planned.exercise.cautionNote && (
+              <div className="bg-rose-500/10 border border-rose-500/30 rounded-lg px-3 py-2.5">
+                <p className="text-xs font-bold text-rose-400 mb-0.5">⚠️ 注意</p>
+                <p className="text-xs text-rose-300/90 leading-relaxed">
+                  {planned.exercise.cautionNote}
+                </p>
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {/* 自重トグル（懸垂・ディップスのみ） */}

@@ -75,10 +75,10 @@ export default function TitleScreen({ onEnterMain, onOpenSettings }: Props) {
         {/* 特徴リスト */}
         <ul className="space-y-2 text-left w-full max-w-xs">
           {[
-            '1RM を自動計算・次回目標を提示',
-            'お任せコースで時間に合わせた自動プラン',
-            '活動カレンダーで継続を可視化',
-            'CSV エクスポートでデータを持ち出し',
+            'ジム初日でも迷わない、種目ごとの解説つき',
+            '考えなくてOK。今日のメニューが自動で表示',
+            'あなたの体に合わせた最適な重量を提示',
+            'カレンダーとグラフで成長を可視化',
           ].map(text => (
             <li key={text}
               className="flex items-center gap-3 bg-slate-900/70 border border-white/10

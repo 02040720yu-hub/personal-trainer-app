@@ -12,7 +12,18 @@ const KEYS = {
 export function getProfile(): UserProfile | null {
   try {
     const raw = localStorage.getItem(KEYS.PROFILE)
-    return raw ? (JSON.parse(raw) as UserProfile) : null
+    if (!raw) return null
+    const parsed = JSON.parse(raw)
+    // 後方互換: 旧データに新フィールドがない場合のデフォルト
+    return {
+      height: parsed.height,
+      weight: parsed.weight,
+      gender: parsed.gender,
+      defaultCourse: parsed.defaultCourse
+        ?? (parsed.gender === 'female' ? 'toning' : 'hypertrophy'),
+      experienceLevel: parsed.experienceLevel ?? 'beginner',
+      defaultMinutes: parsed.defaultMinutes ?? 45,
+    }
   } catch {
     return null
   }

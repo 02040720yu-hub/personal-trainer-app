@@ -40,7 +40,6 @@ export default function WorkoutSession({ exercise, onBack, onHome }: Props) {
   const [savedRecord, setSavedRecord] = useState<WorkoutRecord | null>(null)
   const [prResult, setPRResult] = useState<{ weightPR: boolean; onermPR: boolean } | null>(null)
 
-  // 目安計算: 自己ベスト1RMの80% → コース別回数 / 初回は体重推定
   const allRecords = getAllRecords()
   const bestOneRM = getBestHistoricalOneRM(exercise.id, allRecords)
   const isFirstTime = bestOneRM === 0
@@ -103,28 +102,30 @@ export default function WorkoutSession({ exercise, onBack, onHome }: Props) {
     const isPR = prResult && (prResult.weightPR || prResult.onermPR)
 
     return (
-      <div className="flex flex-col min-h-screen px-4 pt-safe bg-sky-50 animate-fade-up">
+      <div className="flex flex-col min-h-screen px-4 pt-safe bg-slate-950 animate-fade-up">
         <div className="flex-1 flex flex-col justify-center gap-5">
 
           <div className="text-center">
-            <div className="w-20 h-20 bg-emerald-50 border border-emerald-200 rounded-3xl flex items-center justify-center mx-auto mb-5">
+            <div className="w-20 h-20 bg-emerald-500/10 border border-emerald-500/30 rounded-3xl
+              flex items-center justify-center mx-auto mb-5
+              shadow-[0_0_24px_rgba(16,185,129,0.12)]">
               <svg width="40" height="40" viewBox="0 0 40 40" fill="none">
                 <path d="M8 20L16 28L32 12" stroke="#10b981" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round"/>
               </svg>
             </div>
-            <h2 className="text-2xl font-bold tracking-tight text-slate-900">記録完了！</h2>
-            <p className="text-slate-500 text-sm mt-1.5">{exercise.name}</p>
+            <h2 className="text-2xl font-bold tracking-tight text-white">記録完了</h2>
+            <p className="text-slate-400 text-sm mt-1.5">{exercise.name}</p>
           </div>
 
           {isPR && (
-            <div className="flex items-center gap-3 bg-amber-50 border border-amber-200 rounded-2xl px-4 py-3.5">
+            <div className="flex items-center gap-3 bg-amber-500/10 border border-amber-500/30 rounded-2xl px-4 py-3.5">
               <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
                 <path d="M14 4L17 10L24 11L19 16L20.5 23L14 20L7.5 23L9 16L4 11L11 10L14 4Z"
                   fill="#f59e0b" stroke="#d97706" strokeWidth="1.2"/>
               </svg>
               <div>
-                <p className="text-sm font-bold text-amber-700">自己ベスト更新！</p>
-                <p className="text-xs text-amber-600 mt-0.5">
+                <p className="text-sm font-bold text-amber-400">自己ベスト更新</p>
+                <p className="text-xs text-amber-400/70 mt-0.5">
                   {[
                     prResult.onermPR && '推定 1RM',
                     prResult.weightPR && '最大重量',
@@ -135,12 +136,12 @@ export default function WorkoutSession({ exercise, onBack, onHome }: Props) {
             </div>
           )}
 
-          <div className="bg-white border border-sky-100 rounded-2xl shadow-sm divide-y divide-sky-100">
+          <div className="bg-slate-900 border border-white/10 rounded-2xl divide-y divide-white/10">
             <div className="px-5 py-4">
               <p className="label-xs mb-1.5">推定 1RM</p>
-              <p className="text-3xl font-bold text-sky-600 tabular-nums leading-none">
+              <p className="text-3xl font-bold text-cyan-400 tabular-nums leading-none">
                 {savedRecord.best1RM.toFixed(1)}
-                <span className="text-lg font-semibold text-sky-400 ml-1">kg</span>
+                <span className="text-lg font-semibold text-cyan-400/50 ml-1">kg</span>
               </p>
             </div>
             <div className="px-5 py-4">
@@ -148,26 +149,26 @@ export default function WorkoutSession({ exercise, onBack, onHome }: Props) {
               {(() => {
                 const next = calcNextTarget(savedRecord.best1RM, courseType)
                 return (
-                  <p className="text-2xl font-bold text-emerald-600 tabular-nums leading-none">
+                  <p className="text-2xl font-bold text-emerald-400 tabular-nums leading-none">
                     {next.weight}
-                    <span className="text-base font-semibold text-emerald-400 ml-1">kg × {next.reps}回</span>
+                    <span className="text-base font-semibold text-emerald-400/50 ml-1">kg × {next.reps}回</span>
                   </p>
                 )
               })()}
-              <p className="text-xs text-slate-400 mt-1.5">自己ベスト1RMの80%（Epley式）</p>
+              <p className="text-xs text-slate-500 mt-1.5">自己ベスト1RMの80%（Epley式）</p>
             </div>
           </div>
 
-          <div className="bg-white border border-sky-100 rounded-xl shadow-sm">
-            <p className="label-xs px-4 py-3 border-b border-sky-100">今日のセット</p>
+          <div className="bg-slate-900 border border-white/10 rounded-2xl">
+            <p className="label-xs px-4 py-3 border-b border-white/10">今日のセット</p>
             {savedRecord.sets.map((s, i) => (
               <div
                 key={i}
                 className="flex items-center justify-between px-4 py-3
-                  border-b border-sky-50 last:border-0 text-sm"
+                  border-b border-white/5 last:border-0 text-sm"
               >
                 <span className="text-slate-500">セット {i + 1}</span>
-                <span className="font-semibold tabular-nums text-slate-900">
+                <span className="font-semibold tabular-nums text-white">
                   {s.isBodyweight ? '自重' : `${s.weight} kg`} × {s.reps} 回
                 </span>
               </div>
@@ -180,20 +181,21 @@ export default function WorkoutSession({ exercise, onBack, onHome }: Props) {
           <button
             type="button"
             onClick={onBack}
-            className="w-full h-14 bg-sky-500 hover:bg-sky-400 active:bg-sky-600 active:scale-[0.98]
+            className="w-full h-14 bg-gradient-to-r from-cyan-500 to-blue-600
+              hover:from-cyan-400 hover:to-blue-500 active:scale-[0.98]
               text-white text-base font-bold rounded-xl transition-all
-              shadow-lg shadow-sky-500/25
-              focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 focus-visible:ring-offset-2 focus-visible:ring-offset-sky-50"
+              shadow-lg shadow-cyan-500/25
+              focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950"
           >
             別の種目を記録
           </button>
           <button
             type="button"
             onClick={onHome}
-            className="w-full h-14 bg-white hover:bg-sky-50 active:bg-sky-100 active:scale-[0.98]
-              text-slate-600 text-sm font-semibold rounded-xl transition-all
-              border border-sky-200 hover:border-sky-300
-              focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500"
+            className="w-full h-14 bg-slate-900 hover:bg-slate-800 active:scale-[0.98]
+              text-slate-300 text-sm font-semibold rounded-xl transition-all
+              border border-white/10 hover:border-white/20
+              focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500"
           >
             ホームへ
           </button>
@@ -204,36 +206,36 @@ export default function WorkoutSession({ exercise, onBack, onHome }: Props) {
 
   // ── 記録画面 ──────────────────────────────────────────────────────────────────
   return (
-    <div className="flex flex-col min-h-screen bg-sky-50">
+    <div className="flex flex-col min-h-screen bg-slate-950">
 
       {/* スティッキーヘッダー */}
-      <div className="sticky top-0 z-10 bg-white/95 backdrop-blur-sm border-b border-sky-100 px-4 pt-safe pb-4">
+      <div className="sticky top-0 z-10 bg-slate-950/95 backdrop-blur-sm border-b border-white/10 px-4 pt-safe pb-4">
         <button
           type="button"
           onClick={onBack}
-          className="inline-flex items-center gap-1.5 text-sm text-sky-600 hover:text-sky-800
+          className="inline-flex items-center gap-1.5 text-sm text-cyan-400 hover:text-cyan-300
             font-medium transition-colors mb-3 -ml-1 rounded-lg px-1 py-1
-            focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500"
+            focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500"
         >
           ← 種目選択に戻る
         </button>
-        <h2 className="text-xl font-bold leading-snug tracking-tight text-slate-900">{exercise.name}</h2>
-        <p className="text-slate-400 text-xs mt-0.5">{exercise.equipment}</p>
+        <h2 className="text-xl font-bold leading-snug tracking-tight text-white">{exercise.name}</h2>
+        <p className="text-slate-500 text-xs mt-0.5">{exercise.equipment}</p>
       </div>
 
       <div className="flex-1 px-4 pt-4 pb-32 overflow-y-auto">
 
         {/* コース選択タブ */}
-        <div className="flex bg-slate-100 rounded-xl p-1 gap-1 mb-5">
+        <div className="flex bg-slate-900 rounded-xl p-1 gap-1 mb-5 border border-white/10">
           <button
             type="button"
             onClick={() => setCourseType('hypertrophy')}
             aria-pressed={courseType === 'hypertrophy'}
             className={`flex-1 rounded-lg py-2.5 text-sm font-bold transition-all
-              focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500
+              focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500
               ${courseType === 'hypertrophy'
-                ? 'bg-sky-500 text-white shadow-sm'
-                : 'text-slate-500 hover:text-slate-700'}`}
+                ? 'bg-cyan-500 text-white shadow-sm'
+                : 'text-slate-500 hover:text-slate-300'}`}
           >
             筋肥大
           </button>
@@ -245,30 +247,30 @@ export default function WorkoutSession({ exercise, onBack, onHome }: Props) {
               focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-500
               ${courseType === 'toning'
                 ? 'bg-rose-500 text-white shadow-sm'
-                : 'text-slate-500 hover:text-slate-700'}`}
+                : 'text-slate-500 hover:text-slate-300'}`}
           >
             引き締め
           </button>
         </div>
 
         {/* 目安カード */}
-        <div className="bg-white border border-sky-100 rounded-2xl shadow-sm p-5 mb-5">
+        <div className="bg-slate-900 border border-white/10 rounded-2xl p-5 mb-5">
           <p className="label-xs mb-3">
             {isFirstTime ? '初回目安（体重・性別から推定）' : '目安（自己ベスト1RMの80%）'}
           </p>
           <div className="flex items-end gap-2 mb-1">
-            <span className="text-5xl font-bold text-sky-600 tabular-nums leading-none">
+            <span className="text-5xl font-bold text-cyan-400 tabular-nums leading-none">
               {hint.weight}
             </span>
-            <span className="text-slate-500 text-xl mb-1">kg × {hint.reps}回</span>
+            <span className="text-slate-300 text-xl mb-1">kg × {hint.reps}回</span>
           </div>
           {!isFirstTime && (
-            <p className="text-xs text-slate-400 mt-2">
+            <p className="text-xs text-slate-500 mt-2">
               1RM ≈ {bestOneRM.toFixed(1)} kg → 80% = {hint.weight} kg
             </p>
           )}
           {lastRecord && (
-            <div className="mt-3 pt-3 border-t border-sky-50 text-xs text-slate-400">
+            <div className="mt-3 pt-3 border-t border-white/10 text-xs text-slate-500">
               前回: {new Date(lastRecord.date).toLocaleDateString('ja-JP', { month: 'short', day: 'numeric' })}
             </div>
           )}
@@ -296,10 +298,10 @@ export default function WorkoutSession({ exercise, onBack, onHome }: Props) {
         <button
           type="button"
           onClick={addSet}
-          className="w-full h-12 border border-dashed border-sky-300
-            hover:border-sky-400 text-sky-500 hover:text-sky-600 hover:bg-sky-50
+          className="w-full h-12 border border-dashed border-white/15
+            hover:border-cyan-500/40 text-slate-500 hover:text-cyan-400 hover:bg-cyan-500/5
             rounded-xl text-sm font-medium transition-all duration-100
-            focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500"
+            focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500"
         >
           + セットを追加
         </button>
@@ -308,14 +310,15 @@ export default function WorkoutSession({ exercise, onBack, onHome }: Props) {
 
       {/* 固定フッター */}
       <div className="fixed bottom-0 left-0 right-0 z-10">
-        <div className="max-w-md mx-auto px-4 py-4 bg-white/95 backdrop-blur-sm border-t border-sky-100 pb-safe">
+        <div className="max-w-md mx-auto px-4 py-4 bg-slate-950/95 backdrop-blur-sm border-t border-white/10 pb-safe">
           <button
             type="button"
             onClick={handleSave}
-            className="w-full h-14 bg-sky-500 hover:bg-sky-400 active:bg-sky-600 active:scale-[0.98]
+            className="w-full h-14 bg-gradient-to-r from-cyan-500 to-blue-600
+              hover:from-cyan-400 hover:to-blue-500 active:scale-[0.98]
               text-white text-base font-bold rounded-xl transition-all
-              shadow-xl shadow-sky-500/25
-              focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 focus-visible:ring-offset-2 focus-visible:ring-offset-white"
+              shadow-xl shadow-cyan-500/25
+              focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950"
           >
             記録する
           </button>
@@ -367,25 +370,27 @@ function SetRow({
       : null
 
   return (
-    <div className="bg-white border border-sky-100 rounded-xl shadow-sm p-4">
+    <div className="bg-slate-900 border border-white/10 rounded-xl p-4">
 
       {/* ヘッダー行 */}
       <div className="flex items-center justify-between mb-3.5">
         <span className="label-xs">セット {index + 1}</span>
         <div className="flex items-center gap-3">
           {est1RM && (
-            <span className="text-xs text-slate-400 tabular-nums">1RM ≈ {est1RM} kg</span>
+            <span className="text-xs text-slate-500 tabular-nums">1RM ≈ {est1RM} kg</span>
           )}
           {canRemove && (
             <button
               type="button"
               onClick={onRemove}
               aria-label={`セット ${index + 1} を削除`}
-              className="w-7 h-7 flex items-center justify-center rounded-lg text-xs
-                text-slate-300 hover:text-red-500 hover:bg-red-50 transition-colors
-                focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-red-400"
+              className="w-7 h-7 flex items-center justify-center rounded-lg
+                text-slate-600 hover:text-rose-400 hover:bg-rose-500/10 transition-colors
+                focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-rose-400"
             >
-              ✕
+              <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+                <path d="M1 1L11 11M11 1L1 11" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/>
+              </svg>
             </button>
           )}
         </div>
@@ -394,16 +399,16 @@ function SetRow({
       {/* 重量 */}
       <div className="mb-3">
         <div className="flex items-center justify-between mb-1.5">
-          <p className="text-xs text-slate-400">重量</p>
+          <p className="text-xs text-slate-500">重量</p>
           {supportsBodyweightToggle && (
             <button
               type="button"
               onClick={toggleBodyweight}
               className={`text-xs font-semibold px-2.5 py-1 rounded-lg transition-all
-                focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-sky-500
+                focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-cyan-500
                 ${set.isBodyweight
-                  ? 'bg-sky-500 text-white'
-                  : 'bg-sky-50 text-sky-500 border border-sky-200 hover:bg-sky-100'}`}
+                  ? 'bg-cyan-500 text-white'
+                  : 'bg-slate-800 text-cyan-400 border border-cyan-500/20 hover:border-cyan-500/40'}`}
             >
               自重
             </button>
@@ -411,9 +416,9 @@ function SetRow({
         </div>
 
         {set.isBodyweight ? (
-          <div className="h-11 bg-sky-50 border border-sky-200 rounded-lg flex items-center justify-center gap-2">
-            <span className="text-base font-bold text-sky-600">自重</span>
-            <span className="text-xs text-sky-400">({profileWeight} kg)</span>
+          <div className="h-11 bg-cyan-500/10 border border-cyan-500/20 rounded-lg flex items-center justify-center gap-2">
+            <span className="text-base font-bold text-cyan-400">自重</span>
+            <span className="text-xs text-cyan-400/50">({profileWeight} kg)</span>
           </div>
         ) : (
           <div className="flex items-center gap-1.5">
@@ -429,21 +434,22 @@ function SetRow({
               }}
               inputMode="decimal"
               aria-label={`セット ${index + 1} の重量`}
-              className="flex-1 min-w-0 h-11 bg-sky-50 border border-sky-200 rounded-lg
-                text-center text-lg font-bold tabular-nums text-slate-900
-                placeholder:text-sky-300 placeholder:font-normal
-                focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 focus:border-sky-400"
+              className="flex-1 min-w-0 h-11 bg-slate-800 border border-white/10 rounded-lg
+                text-center text-lg font-bold tabular-nums text-white
+                placeholder:text-slate-600 placeholder:font-normal
+                focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500 focus:border-cyan-500
+                transition-all"
             />
             <AdjBtn label="+2.5" onClick={() => adjustWeight(2.5)} wide />
             <AdjBtn label="+5"   onClick={() => adjustWeight(5)} />
-            <span className="text-xs text-slate-400 w-5 text-center shrink-0">kg</span>
+            <span className="text-xs text-slate-500 w-5 text-center shrink-0">kg</span>
           </div>
         )}
       </div>
 
       {/* 回数 */}
       <div>
-        <p className="text-xs text-slate-400 mb-1.5">回数</p>
+        <p className="text-xs text-slate-500 mb-1.5">回数</p>
         <div className="flex items-center gap-1.5">
           <AdjBtn label="−" onClick={() => adjustReps(-1)} wide />
           <input
@@ -456,13 +462,14 @@ function SetRow({
             }}
             inputMode="numeric"
             aria-label={`セット ${index + 1} の回数`}
-            className="flex-1 min-w-0 h-11 bg-sky-50 border border-sky-200 rounded-lg
-              text-center text-lg font-bold tabular-nums text-slate-900
-              placeholder:text-sky-300 placeholder:font-normal
-              focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 focus:border-sky-400"
+            className="flex-1 min-w-0 h-11 bg-slate-800 border border-white/10 rounded-lg
+              text-center text-lg font-bold tabular-nums text-white
+              placeholder:text-slate-600 placeholder:font-normal
+              focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500 focus:border-cyan-500
+              transition-all"
           />
           <AdjBtn label="＋" onClick={() => adjustReps(1)} wide />
-          <span className="text-xs text-slate-400 w-5 text-center shrink-0">回</span>
+          <span className="text-xs text-slate-500 w-5 text-center shrink-0">回</span>
         </div>
       </div>
 
@@ -482,11 +489,11 @@ function AdjBtn({
       type="button"
       onClick={onClick}
       className={`${wide ? 'w-11' : 'w-9'} h-11
-        bg-sky-50 hover:bg-sky-100 active:bg-sky-200 active:scale-[0.94]
-        border border-sky-200 hover:border-sky-300
-        rounded-lg text-xs font-bold text-slate-700
+        bg-slate-800 hover:bg-slate-700 active:bg-slate-600 active:scale-[0.94]
+        border border-white/10 hover:border-white/20
+        rounded-lg text-xs font-bold text-slate-300
         transition-all duration-75 shrink-0
-        focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500`}
+        focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500`}
     >
       {label}
     </button>

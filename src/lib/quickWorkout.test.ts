@@ -4,22 +4,32 @@ import { calcCapacity, buildQuickWorkoutPlan, getBodyPartsForFocus } from './qui
 
 // ── テスト用ヘルパー ──────────────────────────────────────────────────────────
 
-const PROFILE: UserProfile = { height: 170, weight: 70, gender: 'male' }
+const PROFILE: UserProfile = {
+  height: 170, weight: 70, gender: 'male',
+  defaultCourse: 'hypertrophy', experienceLevel: 'beginner', defaultMinutes: 45,
+}
+
+// テスト用に最小限のメタを付けるヘルパー（プラン生成ロジック自体は新フィールドを使わない）
+const meta = {
+  difficulty: 'beginner' as const,
+  suitableFor: { hypertrophy: true, toning: true },
+  description: 'test fixture',
+}
 
 const EXERCISES: Exercise[] = [
-  { id: 'bench-press',    name: 'ベンチプレス',   bodyPart: 'chest',     category: 'compound',  equipment: 'barbell' },
-  { id: 'dumbbell-fly',   name: 'ダンベルフライ', bodyPart: 'chest',     category: 'isolation', equipment: 'dumbbell' },
-  { id: 'squat',          name: 'スクワット',     bodyPart: 'legs',      category: 'compound',  equipment: 'barbell' },
-  { id: 'leg-press',      name: 'レッグプレス',   bodyPart: 'legs',      category: 'compound',  equipment: 'machine' },
-  { id: 'leg-curl',       name: 'レッグカール',   bodyPart: 'legs',      category: 'isolation', equipment: 'machine' },
-  { id: 'deadlift',       name: 'デッドリフト',   bodyPart: 'back',      category: 'compound',  equipment: 'barbell' },
-  { id: 'barbell-row',    name: 'ベントオーバー', bodyPart: 'back',      category: 'compound',  equipment: 'barbell' },
-  { id: 'lat-pulldown',   name: 'ラットプルダウン', bodyPart: 'back',    category: 'compound',  equipment: 'cable' },
-  { id: 'overhead-press', name: 'ショルダープレス', bodyPart: 'shoulders', category: 'compound', equipment: 'barbell' },
-  { id: 'lateral-raise',  name: 'サイドレイズ',   bodyPart: 'shoulders', category: 'isolation', equipment: 'dumbbell' },
-  { id: 'barbell-curl',   name: 'バーベルカール', bodyPart: 'biceps',    category: 'compound',  equipment: 'barbell' },
-  { id: 'triceps-pushdown', name: 'トライセップス', bodyPart: 'triceps', category: 'isolation', equipment: 'cable' },
-  { id: 'cable-crunch',   name: 'ケーブルクランチ', bodyPart: 'core',    category: 'isolation', equipment: 'cable' },
+  { id: 'bench-press',    name: 'ベンチプレス',   bodyPart: 'chest',     category: 'compound',  equipment: 'barbell',  ...meta },
+  { id: 'dumbbell-fly',   name: 'ダンベルフライ', bodyPart: 'chest',     category: 'isolation', equipment: 'dumbbell', ...meta },
+  { id: 'squat',          name: 'スクワット',     bodyPart: 'legs',      category: 'compound',  equipment: 'barbell',  ...meta },
+  { id: 'leg-press',      name: 'レッグプレス',   bodyPart: 'legs',      category: 'compound',  equipment: 'machine',  ...meta },
+  { id: 'leg-curl',       name: 'レッグカール',   bodyPart: 'legs',      category: 'isolation', equipment: 'machine',  ...meta },
+  { id: 'deadlift',       name: 'デッドリフト',   bodyPart: 'back',      category: 'compound',  equipment: 'barbell',  ...meta },
+  { id: 'barbell-row',    name: 'ベントオーバー', bodyPart: 'back',      category: 'compound',  equipment: 'barbell',  ...meta },
+  { id: 'lat-pulldown',   name: 'ラットプルダウン', bodyPart: 'back',    category: 'compound',  equipment: 'cable',    ...meta },
+  { id: 'overhead-press', name: 'ショルダープレス', bodyPart: 'shoulders', category: 'compound', equipment: 'barbell', ...meta },
+  { id: 'lateral-raise',  name: 'サイドレイズ',   bodyPart: 'shoulders', category: 'isolation', equipment: 'dumbbell', ...meta },
+  { id: 'barbell-curl',   name: 'バーベルカール', bodyPart: 'biceps',    category: 'compound',  equipment: 'barbell',  ...meta },
+  { id: 'triceps-pushdown', name: 'トライセップス', bodyPart: 'triceps', category: 'isolation', equipment: 'cable',    ...meta },
+  { id: 'cable-crunch',   name: 'ケーブルクランチ', bodyPart: 'core',    category: 'isolation', equipment: 'cable',    ...meta },
 ]
 
 function makeRecord(
@@ -275,5 +285,118 @@ describe('getBodyPartsForFocus', () => {
     expect(parts).toContain('legs')
     expect(parts).toContain('core')
     expect(parts).toHaveLength(2)
+  })
+})
+
+// ── Phase 3: コース別 / experienceLevel フィルタ + ヒップ優遇 ─────────────────
+
+describe('buildQuickWorkoutPlan - course / experienceLevel フィルタ (Phase 3)', () => {
+  // suitableFor / difficulty のバリエーションを意図的に持つテスト用フィクスチャ
+  const MIXED: Exercise[] = [
+    // chest: 両方OK / hypertrophy専用
+    { id: 'machine-chest-press', name: 'マシンチェストプレス', bodyPart: 'chest', category: 'compound', equipment: 'machine',
+      difficulty: 'beginner',     suitableFor: { hypertrophy: true,  toning: true  }, description: 'desc' },
+    { id: 'bench-press',         name: 'ベンチプレス',       bodyPart: 'chest', category: 'compound', equipment: 'barbell',
+      difficulty: 'intermediate', suitableFor: { hypertrophy: true,  toning: false }, description: 'desc' },
+
+    // back: beginner と advanced を混ぜる
+    { id: 'lat-pulldown',        name: 'ラットプルダウン',   bodyPart: 'back',  category: 'compound', equipment: 'machine',
+      difficulty: 'beginner',     suitableFor: { hypertrophy: true,  toning: true  }, description: 'desc' },
+    { id: 'deadlift',            name: 'デッドリフト',       bodyPart: 'back',  category: 'compound', equipment: 'barbell',
+      difficulty: 'advanced',     suitableFor: { hypertrophy: true,  toning: false }, description: 'desc' },
+
+    // legs: ヒップ系 / 非ヒップ / hypertrophy専用 を混ぜる
+    { id: 'hip-thrust',           name: 'ヒップスラスト',           bodyPart: 'legs', category: 'compound', equipment: 'barbell',
+      difficulty: 'beginner',     suitableFor: { hypertrophy: true,  toning: true  }, description: 'desc' },
+    { id: 'romanian-deadlift',    name: 'ルーマニアンデッド',       bodyPart: 'legs', category: 'compound', equipment: 'barbell',
+      difficulty: 'intermediate', suitableFor: { hypertrophy: true,  toning: true  }, description: 'desc' },
+    { id: 'bulgarian-split-squat',name: 'ブルガリアンスクワット',   bodyPart: 'legs', category: 'compound', equipment: 'dumbbell',
+      difficulty: 'intermediate', suitableFor: { hypertrophy: true,  toning: true  }, description: 'desc' },
+    { id: 'hip-abduction',        name: 'ヒップアブダクション',     bodyPart: 'legs', category: 'isolation', equipment: 'machine',
+      difficulty: 'beginner',     suitableFor: { hypertrophy: false, toning: true  }, description: 'desc' },
+    { id: 'glute-bridge',         name: 'グルートブリッジ',         bodyPart: 'legs', category: 'isolation', equipment: 'bodyweight',
+      difficulty: 'beginner',     suitableFor: { hypertrophy: false, toning: true  }, description: 'desc' },
+    { id: 'kickback',             name: 'キックバック',             bodyPart: 'legs', category: 'isolation', equipment: 'cable',
+      difficulty: 'beginner',     suitableFor: { hypertrophy: false, toning: true  }, description: 'desc' },
+    { id: 'leg-curl',             name: 'レッグカール',             bodyPart: 'legs', category: 'isolation', equipment: 'machine',
+      difficulty: 'beginner',     suitableFor: { hypertrophy: true,  toning: true  }, description: 'desc' },
+    { id: 'leg-extension',        name: 'レッグエクステンション',   bodyPart: 'legs', category: 'isolation', equipment: 'machine',
+      difficulty: 'beginner',     suitableFor: { hypertrophy: true,  toning: true  }, description: 'desc' },
+    { id: 'squat',                name: 'バーベルスクワット',       bodyPart: 'legs', category: 'compound', equipment: 'barbell',
+      difficulty: 'intermediate', suitableFor: { hypertrophy: true,  toning: false }, description: 'desc' },
+
+    // shoulders / biceps / triceps / core: 埋め用に最低 1 種目ずつ
+    { id: 'machine-shoulder-press', name: 'マシンSP',     bodyPart: 'shoulders', category: 'compound', equipment: 'machine',
+      difficulty: 'beginner',       suitableFor: { hypertrophy: true, toning: true }, description: 'desc' },
+    { id: 'cable-curl',             name: 'ケーブルカール', bodyPart: 'biceps', category: 'isolation', equipment: 'cable',
+      difficulty: 'beginner',       suitableFor: { hypertrophy: true, toning: true }, description: 'desc' },
+    { id: 'rope-pushdown',          name: 'ロープ',         bodyPart: 'triceps', category: 'isolation', equipment: 'cable',
+      difficulty: 'beginner',       suitableFor: { hypertrophy: true, toning: true }, description: 'desc' },
+    { id: 'plank',                  name: 'プランク',       bodyPart: 'core',   category: 'isolation', equipment: 'bodyweight',
+      difficulty: 'beginner',       suitableFor: { hypertrophy: false, toning: true }, description: 'desc' },
+  ]
+
+  it('1) hypertrophy コース: 選出される全種目で suitableFor.hypertrophy === true', () => {
+    for (let seed = 0; seed < 30; seed++) {
+      const plan = buildQuickWorkoutPlan({
+        minutes: 90, focus: 'full', courseType: 'hypertrophy',
+        profile: PROFILE, records: [], exercises: MIXED, seed,
+      })
+      plan.exercises.forEach(p => {
+        expect(p.exercise.suitableFor.hypertrophy, `seed=${seed} で ${p.exercise.id}`).toBe(true)
+      })
+    }
+  })
+
+  it('2) toning コース: 選出される全種目で suitableFor.toning === true', () => {
+    for (let seed = 0; seed < 30; seed++) {
+      const plan = buildQuickWorkoutPlan({
+        minutes: 90, focus: 'full', courseType: 'toning',
+        profile: PROFILE, records: [], exercises: MIXED, seed,
+      })
+      plan.exercises.forEach(p => {
+        expect(p.exercise.suitableFor.toning, `seed=${seed} で ${p.exercise.id}`).toBe(true)
+      })
+    }
+  })
+
+  it('3) toning コース: hypertrophy 専用種目（ベンチプレス等）は選出されない', () => {
+    const HYPER_ONLY = ['bench-press', 'deadlift', 'squat']
+    for (let seed = 0; seed < 30; seed++) {
+      const plan = buildQuickWorkoutPlan({
+        minutes: 90, focus: 'full', courseType: 'toning',
+        profile: PROFILE, records: [], exercises: MIXED, seed,
+      })
+      const ids = plan.exercises.map(p => p.exercise.id)
+      HYPER_ONLY.forEach(id => {
+        expect(ids, `seed=${seed} で ${id} が混入`).not.toContain(id)
+      })
+    }
+  })
+
+  it("4) experienceLevel='beginner' のとき advanced 種目は選出されない", () => {
+    for (let seed = 0; seed < 30; seed++) {
+      const plan = buildQuickWorkoutPlan({
+        minutes: 90, focus: 'full', courseType: 'hypertrophy',
+        experienceLevel: 'beginner',
+        profile: PROFILE, records: [], exercises: MIXED, seed,
+      })
+      plan.exercises.forEach(p => {
+        expect(p.exercise.difficulty, `seed=${seed} で ${p.exercise.id} が advanced`).not.toBe('advanced')
+      })
+    }
+  })
+
+  it('5) toning + legs フォーカス: ヒップ系種目が必ず含まれる', () => {
+    const HIP_IDS = ['hip-thrust', 'hip-abduction', 'glute-bridge',
+                     'kickback', 'romanian-deadlift', 'bulgarian-split-squat']
+    for (let seed = 0; seed < 30; seed++) {
+      const plan = buildQuickWorkoutPlan({
+        minutes: 60, focus: 'custom', customBodyParts: ['legs'], courseType: 'toning',
+        profile: PROFILE, records: [], exercises: MIXED, seed,
+      })
+      const hasHip = plan.exercises.some(p => HIP_IDS.includes(p.exercise.id))
+      expect(hasHip, `seed=${seed} でヒップ系種目が含まれない`).toBe(true)
+    }
   })
 })

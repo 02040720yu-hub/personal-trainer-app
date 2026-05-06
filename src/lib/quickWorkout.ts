@@ -5,9 +5,7 @@
 
 import type { BodyPart, Exercise, UserProfile, WorkoutRecord } from '../types'
 import {
-  calculateInitial1RM,
-  calculateInitialTargetWeight,
-  calculateWeightForReps,
+  calculateInitialTargetWeightForExercise,
   roundToNearestPlate,
 } from './calculations'
 
@@ -91,6 +89,59 @@ function shuffle<T>(arr: T[], rand: () => number): T[] {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// 候補抽出ヘルパー（コース・難易度・ヒップ優遇）
+// ─────────────────────────────────────────────────────────────────────────────
+
+type ExperienceLevel = 'beginner' | 'intermediate' | 'advanced'
+
+/** 引き締めコースで legs 部位の候補リスト先頭に並べたいヒップ系種目 ID */
+const HIP_PRIORITY_IDS = new Set<string>([
+  'hip-thrust',
+  'hip-abduction',
+  'glute-bridge',
+  'kickback',
+  'romanian-deadlift',
+  'bulgarian-split-squat',
+])
+
+/** toning のときヒップ系種目を先頭に並べ直す。それ以外は no-op */
+function applyHipPriority(exercises: Exercise[], course: CourseType): Exercise[] {
+  if (course !== 'toning') return exercises
+  const hip  = exercises.filter(e => HIP_PRIORITY_IDS.has(e.id))
+  const rest = exercises.filter(e => !HIP_PRIORITY_IDS.has(e.id))
+  return [...hip, ...rest]
+}
+
+/**
+ * 部位ごとに候補リストを構築する。
+ *  1. その部位 × suitableFor[course] でフィルタ
+ *  2. experienceLevel で難易度フィルタ。結果が 0 件になる場合はフィルタを緩和
+ *  3. compound 優先 → isolation の順に並べ、それぞれ内部はシャッフル
+ */
+function getCandidatesForBodyPart(
+  bp: BodyPart,
+  exercises: Exercise[],
+  course: CourseType,
+  experienceLevel: ExperienceLevel | undefined,
+  rand: () => number,
+): Exercise[] {
+  const inBp = exercises.filter(e => e.bodyPart === bp && e.suitableFor[course])
+
+  let filtered = inBp
+  if (experienceLevel === 'beginner') {
+    const beginnerOnly = inBp.filter(e => e.difficulty === 'beginner')
+    filtered = beginnerOnly.length > 0 ? beginnerOnly : inBp
+  } else if (experienceLevel === 'intermediate') {
+    const notAdvanced = inBp.filter(e => e.difficulty !== 'advanced')
+    filtered = notAdvanced.length > 0 ? notAdvanced : inBp
+  }
+
+  const compound  = shuffle(filtered.filter(e => e.category === 'compound'),  rand)
+  const isolation = shuffle(filtered.filter(e => e.category === 'isolation'), rand)
+  return [...compound, ...isolation]
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // buildQuickWorkoutPlan
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -109,12 +160,14 @@ export function buildQuickWorkoutPlan(params: {
   /** focus === 'custom' のときに使用する部位リスト */
   customBodyParts?: BodyPart[]
   courseType?: CourseType
+  /** ユーザー経験レベル（未指定なら全難易度を候補に含める） */
+  experienceLevel?: ExperienceLevel
   profile: UserProfile
   records: WorkoutRecord[]
   exercises: Exercise[]
   seed?: number
 }): QuickWorkoutPlan {
-  const { minutes, focus, customBodyParts, profile, records, exercises, seed } = params
+  const { minutes, focus, customBodyParts, experienceLevel, profile, records, exercises, seed } = params
   const course: CourseType = params.courseType ?? 'hypertrophy'
   const rand = seededRandom(seed ?? Date.now())
 
@@ -151,12 +204,16 @@ export function buildQuickWorkoutPlan(params: {
   }
 
   // 種目候補を部位優先順 × compound 優先で並べる
+  // - suitableFor[course] でコース別フィルタ
+  // - experienceLevel で難易度フィルタ（候補が 0 件になる場合は緩和）
+  // - toning && legs はヒップ系種目を先頭に並べ替え
   const candidates: Exercise[] = []
   for (const bp of bodyPartOrder) {
-    const inBp = exercises.filter(e => e.bodyPart === bp)
-    const compound  = shuffle(inBp.filter(e => e.category === 'compound'),  rand)
-    const isolation = shuffle(inBp.filter(e => e.category === 'isolation'), rand)
-    candidates.push(...compound, ...isolation)
+    const bpCandidates = applyHipPriority(
+      getCandidatesForBodyPart(bp, exercises, course, experienceLevel, rand),
+      course,
+    )
+    candidates.push(...bpCandidates)
   }
 
   // 重複排除しつつ exerciseCount 件選出
@@ -188,21 +245,19 @@ export function buildQuickWorkoutPlan(params: {
     let weightSource: 'record' | 'estimate'
 
     if (bestOneRM > 0) {
-      // 自己ベスト 1RM の 80% を目安重量とする
-      targetWeight = roundToNearestPlate(bestOneRM * 0.8)
+      // ユーザーが履歴で見ている「次回目標」と一致させるため、最新レコードの
+      // nextTargetWeight をそのまま使う。値が無い旧データの場合のみ best1RM × 80% にフォールバック。
+      const latest = exerciseRecords[0] // recordsByExercise は date desc 済み
+      targetWeight = latest.nextTargetWeight > 0
+        ? latest.nextTargetWeight
+        : roundToNearestPlate(bestOneRM * 0.8)
       weightSource = 'record'
     } else {
-      // 初回: 体重・性別から推定
-      if (course === 'toning') {
-        const initial1RM = calculateInitial1RM(
-          exercise.id, profile.weight, profile.gender, exercise.category,
-        )
-        targetWeight = roundToNearestPlate(calculateWeightForReps(initial1RM, 10))
-      } else {
-        targetWeight = calculateInitialTargetWeight(
-          exercise.id, profile.weight, profile.gender, exercise.category,
-        )
-      }
+      // 初回: 体重・性別 × 種目別マルチプライヤーから推定
+      // (内部で 10RM 相当 × FIRST_SESSION_DISCOUNT(0.75)、バーベルは最小 20kg 保証)
+      targetWeight = calculateInitialTargetWeightForExercise(
+        exercise, profile.weight, profile.gender,
+      )
       weightSource = 'estimate'
     }
 

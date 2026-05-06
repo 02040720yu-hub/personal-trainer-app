@@ -53,11 +53,20 @@ export default function SettingsScreen({ onBack, onDataCleared }: Props) {
 // プロフィール編集
 // ─────────────────────────────────────────────────────────────────────────────
 
+type Minutes = UserProfile['defaultMinutes']
+const TIME_OPTIONS: Minutes[] = [20, 30, 45, 60, 90]
+
 function ProfileSection() {
   const current = getProfile()
   const [height,  setHeight]  = useState(String(current?.height  ?? 170))
   const [weight,  setWeight]  = useState(String(current?.weight  ?? 65))
   const [gender,  setGender]  = useState<UserProfile['gender']>(current?.gender ?? 'male')
+  const [defaultCourse, setDefaultCourse] =
+    useState<UserProfile['defaultCourse']>(current?.defaultCourse ?? 'hypertrophy')
+  const [experienceLevel, setExperienceLevel] =
+    useState<UserProfile['experienceLevel']>(current?.experienceLevel ?? 'beginner')
+  const [defaultMinutes, setDefaultMinutes] =
+    useState<Minutes>(current?.defaultMinutes ?? 45)
   const [errors,  setErrors]  = useState<Record<string, string>>({})
   const [saved,   setSaved]   = useState(false)
 
@@ -73,7 +82,14 @@ function ProfileSection() {
   const handleSave = () => {
     const errs = validate()
     if (Object.keys(errs).length > 0) { setErrors(errs); return }
-    saveProfile({ height: parseFloat(height), weight: parseFloat(weight), gender })
+    saveProfile({
+      height: parseFloat(height),
+      weight: parseFloat(weight),
+      gender,
+      defaultCourse,
+      experienceLevel,
+      defaultMinutes,
+    })
     setSaved(true)
     setTimeout(() => setSaved(false), 2000)
   }
@@ -123,6 +139,79 @@ function ProfileSection() {
         error={errors.weight}
         onChange={v => { setWeight(v); clearError('weight') }}
       />
+
+      {/* デフォルトコース */}
+      <div className="space-y-2">
+        <p className="label-xs">目的（デフォルトコース）</p>
+        <div className="grid grid-cols-2 gap-2" role="group" aria-label="コース選択">
+          {([
+            { value: 'hypertrophy', label: '筋肥大' },
+            { value: 'toning',      label: '引き締め' },
+          ] as { value: UserProfile['defaultCourse']; label: string }[]).map(opt => (
+            <button
+              key={opt.value}
+              type="button"
+              onClick={() => setDefaultCourse(opt.value)}
+              aria-pressed={defaultCourse === opt.value}
+              className={`h-11 rounded-xl text-sm font-semibold transition-all active:scale-[0.97]
+                focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500 focus-visible:ring-offset-1 focus-visible:ring-offset-slate-900
+                ${defaultCourse === opt.value
+                  ? (opt.value === 'toning' ? 'bg-rose-500 text-white shadow-md shadow-rose-500/20' : 'bg-cyan-500 text-white shadow-md shadow-cyan-500/20')
+                  : 'bg-slate-800 text-slate-300 border border-white/10 hover:bg-slate-700 hover:border-white/20'}`}
+            >
+              {opt.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* 経験レベル */}
+      <div className="space-y-2">
+        <p className="label-xs">経験レベル</p>
+        <div className="grid grid-cols-3 gap-2" role="group" aria-label="経験レベル選択">
+          {([
+            { value: 'beginner',     label: '初心者' },
+            { value: 'intermediate', label: '中級者' },
+            { value: 'advanced',     label: '上級者' },
+          ] as { value: UserProfile['experienceLevel']; label: string }[]).map(opt => (
+            <button
+              key={opt.value}
+              type="button"
+              onClick={() => setExperienceLevel(opt.value)}
+              aria-pressed={experienceLevel === opt.value}
+              className={`h-11 rounded-xl text-xs font-semibold transition-all active:scale-[0.97]
+                focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500 focus-visible:ring-offset-1 focus-visible:ring-offset-slate-900
+                ${experienceLevel === opt.value
+                  ? 'bg-cyan-500 text-white shadow-md shadow-cyan-500/20'
+                  : 'bg-slate-800 text-slate-300 border border-white/10 hover:bg-slate-700 hover:border-white/20'}`}
+            >
+              {opt.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* 標準時間 */}
+      <div className="space-y-2">
+        <p className="label-xs">標準のトレーニング時間</p>
+        <div className="grid grid-cols-5 gap-2" role="group" aria-label="標準時間選択">
+          {TIME_OPTIONS.map(m => (
+            <button
+              key={m}
+              type="button"
+              onClick={() => setDefaultMinutes(m)}
+              aria-pressed={defaultMinutes === m}
+              className={`h-11 rounded-xl text-sm font-bold transition-all active:scale-[0.97]
+                focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500 focus-visible:ring-offset-1 focus-visible:ring-offset-slate-900
+                ${defaultMinutes === m
+                  ? 'bg-cyan-500 text-white shadow-md shadow-cyan-500/20'
+                  : 'bg-slate-800 text-slate-300 border border-white/10 hover:bg-slate-700 hover:border-white/20'}`}
+            >
+              {m}<span className="text-[10px] font-normal ml-0.5">分</span>
+            </button>
+          ))}
+        </div>
+      </div>
 
       <button
         type="button"

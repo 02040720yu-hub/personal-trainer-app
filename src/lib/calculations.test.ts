@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest'
+import type { Exercise } from '../types'
 import {
   calculate1RM,
   calculateWeightForReps,
@@ -7,6 +8,7 @@ import {
   roundToNearestPlate,
   calculateInitial1RM,
   calculateInitialTargetWeight,
+  calculateInitialTargetWeightForExercise,
 } from './calculations'
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -164,5 +166,90 @@ describe('calculateInitialTargetWeight', () => {
     // 体重が非常に小さい場合でも最小 2.5 kg
     const result = calculateInitialTargetWeight('lateral-raise', 20, 'female', 'isolation')
     expect(result).toBeGreaterThanOrEqual(2.5)
+  })
+})
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Phase 4: 初回ディスカウント / バーベル下限 / 新種目マルチプライヤー
+// ─────────────────────────────────────────────────────────────────────────────
+
+describe('calculateInitialTargetWeightForExercise (Phase 4)', () => {
+  // テスト用 Exercise factory（必須フィールドを最小限で埋める）
+  const ex = (overrides: Partial<Exercise> & Pick<Exercise, 'id' | 'category' | 'equipment'>): Exercise => ({
+    name: 'test',
+    bodyPart: 'chest',
+    difficulty: 'beginner',
+    suitableFor: { hypertrophy: true, toning: true },
+    description: 'desc',
+    ...overrides,
+  })
+
+  it('1) バーベル種目は計算結果が 20kg 未満でも最小 20kg を返す', () => {
+    // 体重 40kg 女性 + ベンチプレス: 40 × 0.30 × 0.75 × 0.75 ≈ 6.75 → 通常 7.5kg
+    // バーベル種目なので 20kg にクランプされるはず
+    const benchPress = ex({
+      id: 'bench-press', category: 'compound', equipment: 'バーベル',
+    })
+    const result = calculateInitialTargetWeightForExercise(benchPress, 40, 'female')
+    expect(result).toBe(20)
+  })
+
+  it('1b) 体重が大きい場合はバーベル下限の 20 を超える正常値が返る', () => {
+    const benchPress = ex({
+      id: 'bench-press', category: 'compound', equipment: 'バーベル',
+    })
+    const result = calculateInitialTargetWeightForExercise(benchPress, 80, 'male')
+    expect(result).toBeGreaterThanOrEqual(20)
+    // 80 × 0.50 × 0.75 × 0.75 = 22.5
+    expect(result).toBe(22.5)
+  })
+
+  it('1c) バーベル以外の種目は 20kg 未満も返してよい', () => {
+    // ダンベル種目はバー重量の縛りなし
+    const dumbbellCurl = ex({
+      id: 'dumbbell-curl', category: 'isolation', equipment: 'ダンベル',
+      bodyPart: 'biceps',
+    })
+    const result = calculateInitialTargetWeightForExercise(dumbbellCurl, 50, 'female')
+    expect(result).toBeLessThan(20)
+    expect(result).toBeGreaterThanOrEqual(2.5)
+  })
+
+  it('2) 初回ディスカウント 0.75 が適用されている（旧 calculateInitialTargetWeight より 25% 軽い）', () => {
+    // FIRST_SESSION_DISCOUNT は calculateInitialTargetWeight の内部にも適用された
+    // ので、計算式から算出した「ディスカウント前」値より 25% 軽くなることを確認
+    const bw = 70
+    const initial1RM = calculateInitial1RM('squat', bw, 'male', 'compound')
+    const without = calculate10RMTarget(initial1RM)             // ディスカウント前
+    const result  = calculateInitialTargetWeight('squat', bw, 'male', 'compound')
+    // ディスカウント後 = without × 0.75（2.5kg 単位の丸めあり）
+    expect(result).toBeCloseTo(roundToNearestPlate(without * 0.75), 0)
+    expect(result).toBeLessThan(without)
+  })
+
+  it('3) 新規種目 hip-thrust のマルチプライヤーが機能する（女性 55kg で妥当な範囲）', () => {
+    const hipThrust = ex({
+      id: 'hip-thrust', category: 'compound', equipment: 'バーベル/ダンベル',
+      bodyPart: 'legs',
+    })
+    // 55 × 0.90 × 0.75 × 0.75 ≈ 27.84 → 27.5kg
+    const result = calculateInitialTargetWeightForExercise(hipThrust, 55, 'female')
+    expect(result).toBeGreaterThan(15)
+    expect(result).toBeLessThan(45)
+    expect(result).toBe(27.5)
+  })
+
+  it('3b) 新規種目 hip-abduction のマルチプライヤーが機能する', () => {
+    // 55 × 0.45 × 0.75 × 0.75 ≈ 13.92 → 12.5kg
+    const result = calculateInitialTargetWeight('hip-abduction', 55, 'female', 'isolation')
+    expect(result).toBeGreaterThan(0)
+    expect(result).toBeLessThan(20)
+  })
+
+  it('3c) 新規種目 mountain-climber のマルチプライヤーが機能する', () => {
+    // 自重ベース想定で低めの値
+    const result = calculateInitialTargetWeight('mountain-climber', 60, 'male', 'compound')
+    expect(result).toBeGreaterThanOrEqual(2.5)
+    expect(result).toBeLessThan(10)
   })
 })

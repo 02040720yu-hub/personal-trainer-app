@@ -22,3 +22,6 @@ Thumbs.db
 # Vite
 *.local
 .vercel
+
+# Chat logs (個人情報を含む可能性があるためコミットしない)
+chat-log-*.md
